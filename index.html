@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Korea CRE Radar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #14181f;
+    --paper: #fbfaf7;
+    --line: #e4e0d8;
+    --muted: #6a6f78;
+    --accent: #1f5f5b;      /* deep teal — reads as "signal", not decoration */
+    --accent-soft: #eaf1f0;
+    --flag: #b23a2e;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: "IBM Plex Sans", "IBM Plex Sans KR", system-ui, sans-serif;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 32px 20px 80px; }
+
+  header {
+    display: flex; align-items: baseline; justify-content: space-between;
+    flex-wrap: wrap; gap: 8px 16px;
+    border-bottom: 2px solid var(--ink); padding-bottom: 14px; margin-bottom: 4px;
+  }
+  h1 {
+    font-family: "Fraunces", Georgia, serif; font-weight: 600;
+    font-size: 30px; letter-spacing: -0.01em; margin: 0; line-height: 1.05;
+  }
+  h1 .sub { display:block; font-family:"IBM Plex Sans"; font-weight:400;
+    font-size: 13px; color: var(--muted); letter-spacing: 0; margin-top: 4px; }
+  .stamp { text-align: right; font-size: 13px; color: var(--muted); }
+  .stamp .count { color: var(--ink); font-weight: 600; }
+
+  .cat { margin-top: 34px; }
+  h2 {
+    display: flex; align-items: center; gap: 10px;
+    font-family: "Fraunces", serif; font-weight: 600; font-size: 19px;
+    margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line);
+  }
+  h2 .emoji { font-size: 17px; }
+  h2 .count {
+    margin-left: auto; font-family: "IBM Plex Sans"; font-size: 12px;
+    font-weight: 600; color: var(--accent); background: var(--accent-soft);
+    padding: 2px 9px; border-radius: 20px;
+  }
+
+  .cards { display: flex; flex-direction: column; }
+  .card {
+    display: block; text-decoration: none; color: inherit;
+    padding: 13px 4px 14px; border-bottom: 1px solid var(--line);
+    transition: padding-left .12s ease, background .12s ease;
+  }
+  .card:hover { background: #fff; padding-left: 10px; }
+  .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .en { font-size: 16px; font-weight: 500; line-height: 1.35; }
+  .ko { font-family:"IBM Plex Sans KR"; font-size: 14px; color: #3f4a49; margin-top: 2px; }
+  .meta {
+    display: flex; gap: 8px; align-items: baseline; margin-top: 6px;
+    font-size: 12px; color: var(--muted);
+  }
+  .meta .src { color: var(--accent); font-weight: 600; white-space: nowrap; }
+  .meta .head {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    opacity: .8;
+  }
+
+  .empty { text-align: center; padding: 80px 20px; color: var(--muted); }
+  .empty-mark { font-family:"Fraunces",serif; font-size: 48px; color: var(--line); }
+  .empty-sub { font-size: 13px; }
+
+  footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line);
+    font-size: 12px; color: var(--muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+  a.tune { color: var(--accent); text-decoration: none; }
+  a.tune:hover { text-decoration: underline; }
+
+  @media (max-width: 480px) {
+    h1 { font-size: 25px; }
+    .meta .head { display: none; }
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink:#eceae4; --paper:#15171a; --line:#2b2f36; --muted:#9aa0a8;
+             --accent:#5fb8b0; --accent-soft:#1c2b2a; --flag:#e0725f; }
+    .card:hover { background:#1b1e22; }
+    .ko { color:#b9c3c2; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Korea CRE Radar
+        <span class="sub">Korean companies → US expansion · funding · listings</span>
+      </h1>
+      <div class="stamp">
+        <div class="count">4 signals</div>
+        <div>Tuesday, September 8, 2026</div>
+      </div>
+    </header>
+    
+        <section class="cat">
+          <h2><span class="emoji">🇺🇸</span>US Expansion
+              <span class="count">2</span></h2>
+          <div class="cards">
+      <a class="card" href="http://a" target="_blank" rel="noopener">
+        <div class="en">Samsung SDI to build $2B battery plant in Indiana</div>
+        <div class="ko">삼성SDI 인디애나 배터리 공장</div>
+        <div class="meta"><span class="src">Yonhap</span><span class="head">Samsung SDI to build $2B battery plant in Indiana</span></div>
+      </a>
+
+      <a class="card" href="http://b" target="_blank" rel="noopener">
+        <div class="en">Hyundai Mobis breaks ground on Georgia plant</div>
+        <div class="ko">현대모비스 조지아 신공장 착공</div>
+        <div class="meta"><span class="src">전자신문</span><span class="head">현대모비스 미국 조지아 신공장 착공</span></div>
+      </a></div>
+        </section>
+
+        <section class="cat">
+          <h2><span class="emoji">💰</span>Funding
+              <span class="count">1</span></h2>
+          <div class="cards">
+      <a class="card" href="http://e" target="_blank" rel="noopener">
+        <div class="en">Adtech firm Moloco raises $200M Series D</div>
+        <div class="ko">몰로코 2억달러 시리즈D 유치</div>
+        <div class="meta"><span class="src">KMA</span><span class="head">Local weather forecast for Seoul</span></div>
+      </a></div>
+        </section>
+
+        <section class="cat">
+          <h2><span class="emoji">📈</span>IPO / Listing
+              <span class="count">1</span></h2>
+          <div class="cards">
+      <a class="card" href="http://c" target="_blank" rel="noopener">
+        <div class="en">Doosan Enerbility pursues Nasdaq listing</div>
+        <div class="ko">두산에너빌리티 나스닥 상장 추진</div>
+        <div class="meta"><span class="src">TechCrunch</span><span class="head">AI startup Moloco raises $200M Series D</span></div>
+      </a></div>
+        </section>
+    <footer>
+      <span>Generated 05:56 UTC · Google News + Claude</span>
+      <span>Tune what it catches in <span class="tune">config.py</span></span>
+    </footer>
+  </div>
+</body>
+</html>

@@ -1,0 +1,41 @@
+name: Korea CRE Radar
+
+on:
+  schedule:
+    # Times are UTC. 13:00 UTC = 6:00 AM Pacific Daylight (summer),
+    # 5:00 AM Pacific Standard (winter). Lands before you're at your desk.
+    # Change this one number to shift the delivery time.
+    - cron: "0 13 * * 1-5"   # Mon–Fri
+  workflow_dispatch:          # lets you run it manually from the Actions tab
+
+# Allow the workflow to commit the refreshed page back to the repo
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Generate today's page
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python generate.py
+
+      - name: Commit updated page
+        run: |
+          git config user.name  "korea-cre-radar-bot"
+          git config user.email "actions@github.com"
+          git add docs/index.html
+          git commit -m "Radar update $(date -u +'%Y-%m-%d')" || echo "No changes"
+          git push
