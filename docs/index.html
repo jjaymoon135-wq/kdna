@@ -61,6 +61,27 @@
   }
   .card:hover { background: #fff; padding-left: 10px; }
   .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .card.secondary { opacity: .72; }
+  .card.secondary:hover { opacity: 1; }
+  .card.starred { opacity: 1; border-left: 2px solid var(--accent);
+    padding-left: 10px; margin-left: -12px; }
+  .star { flex: none; color: var(--accent); font-size: 13px;
+    transform: translateY(-1px); }
+  .row { display: flex; align-items: baseline; gap: 9px; }
+  .badge {
+    flex: none; font-size: 10.5px; font-weight: 600; letter-spacing: .01em;
+    color: var(--accent); background: var(--accent-soft);
+    padding: 2px 7px; border-radius: 4px; transform: translateY(-1px);
+    white-space: nowrap;
+  }
+  .badge.muted { color: var(--muted); background: transparent;
+    border: 1px solid var(--line); }
+  .divider {
+    font-size: 11px; color: var(--muted); letter-spacing: .06em;
+    margin: 14px 0 4px; padding-bottom: 4px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
   .en { font-size: 16px; font-weight: 500; line-height: 1.35; }
   .ko { font-family:"IBM Plex Sans KR"; font-size: 14px; color: #3f4a49; margin-top: 2px; }
   .meta {
@@ -68,6 +89,8 @@
     font-size: 12px; color: var(--muted);
   }
   .meta .src { color: var(--accent); font-weight: 600; white-space: nowrap; }
+  .meta .when { white-space: nowrap; }
+  .meta .when::before { content: "·"; margin-right: 8px; opacity: .6; }
   .meta .head {
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     opacity: .8;
@@ -101,66 +124,50 @@
         <span class="sub">Korean companies → US expansion · funding · listings</span>
       </h1>
       <div class="stamp">
-        <div class="count">15 signals</div>
+        <div class="count">14 signals</div>
         <div>Thursday, September 10, 2026</div>
       </div>
     </header>
     
         <section class="cat">
           <h2><span class="emoji">🇺🇸</span>US Expansion
-              <span class="count">5</span></h2>
+              <span class="count">1</span></h2>
           <div class="cards">
-      <a class="card" href="https://news.google.com/rss/articles/CBMingFBVV95cUxOLWMyWVJZV3psdExPcHlKNUdSRi1tUmFEU2swNUtVN05xX2t4LTJwejF6a0JhR3F4WWVpZGNROWdmN3lDT2JlUm5rRVk1blMwNDlfYnA1ZTBqTjNHSTRPLUMzRDl6QTdEbHdBX056YVA0T3Y3M2t2SW1OZ0RJSVNlOHdXTlU4QXBleUsxMGxuMlQtZ3BCLUlaQVdtVW14QQ?oc=5" target="_blank" rel="noopener">
-        <div class="en">Alaska coal plant project involves Korean partners as US investment</div>
-        <div class="ko">알래스카 석탄발전소, 한국 파트너 참여 미국 투자</div>
-        <div class="meta"><span class="src">en.sedaily.com</span><span class="head">Alaska Coal Plant With Korean Partners Eyed as U.S. Investment Card</span></div>
-      </a>
-
-      <a class="card" href="https://news.google.com/rss/articles/CBMiaEFVX3lxTE1nTnUxNm5FRkh3YVltaTBSdjNQQU85S1pLanBzX094ZmFjcXB0XzRVR3dIYzRuYWlBX1JSTkNYT2NhemVVZXVsbG0yalk3R19JWUwyaDFJcFpqek91UzRMZDFWd1dXbEVG?oc=5" target="_blank" rel="noopener">
-        <div class="en">Samsung SDS expands robot business investment to United States</div>
-        <div class="ko">삼성SDS, 로봇 사업 미국까지 확대</div>
-        <div class="meta"><span class="src">테크월드</span><span class="head">삼성SDS, AX·RX·물류로 투자축 확대…로봇 사업 미국까지 겨냥</span></div>
-      </a>
-
-      <a class="card" href="https://news.google.com/rss/articles/CBMiUkFVX3lxTFBQN2dKWldpVFJXT3p6UkRDRVl2aU1OM09NYUdBckpIXzRsMzBDSy1wdUNQNU9ma1F6ajhNQkZ0S3NYUTNQSE5DYXFjU2tDRXFRNmc?oc=5" target="_blank" rel="noopener">
-        <div class="en">Mapia expands from Busan to Houston, targeting US and CES</div>
-        <div class="ko">매피아, 부산에서 휴스턴까지 미국·CES 정조준</div>
-        <div class="meta"><span class="src">유스연합</span><span class="head">부산서 출발해 휴스턴까지…매피아, 베타 오픈 이어 미국·CES 정조준</span></div>
-      </a>
-
-      <a class="card" href="https://news.google.com/rss/articles/CBMiRkFVX3lxTE1pRmk5Nm1TblhOODhGOXo5TmNTdUJFcDBfRW1hNmVFY2w1WlNheHQzUDRBa2FnNUJlV2VUa2kzZG84RVRtVEE?oc=5" target="_blank" rel="noopener">
-        <div class="en">Gyeonggi Innovation Center wins IEDC gold for semiconductor Portland expansion</div>
-        <div class="ko">경기혁신센터, 반도체 포틀랜드 진출 성과 인정</div>
-        <div class="meta"><span class="src">beSUCCESS</span><span class="head">경기혁신센터, 美 IEDC 경제개발상 ‘금상’ 수상…반도체 포틀랜드 진출 성과 인정</span></div>
-      </a>
-
-      <a class="card" href="https://news.google.com/rss/articles/CBMia0FVX3lxTE50N0toRDVlX0RjSU5nOGxobzJjOFBsVTRkVnd6VXZockFkN2haUER2TnlLdnVGbWo0RzMxX2pMNGtjd292WHlpM0N4Rzg0bGpqZGdfeWVoTUM0MUxScm1ETlduV0kyYk5VcWhR?oc=5" target="_blank" rel="noopener">
-        <div class="en">Korean firm sends first payment for US investment this month, acquires Westinghouse stake</div>
-        <div class="ko">대미투자 이달 말 송금, 웨스팅하우스 지분 매입</div>
-        <div class="meta"><span class="src">한겨레</span><span class="head">[단독] 대미투자 이달 말 첫 송금…미 웨스팅하우스 지분도 매입</span></div>
+      <a class="card secondary" href="https://news.google.com/rss/articles/CBMiXEFVX3lxTE1QYnJ5dFZYZW0wNjZMWDBpWW9ScW5xY0RyVGVoSkdOaFhkSTZXMk5NMDR4a1JzREpKdVRsTTAtZEcyUWJud0FLdzFmUnNNNVc1SmZqUmM5Z05nV3JK?oc=5" target="_blank" rel="noopener">
+        <div class="row"><span class="badge muted">Other</span><span class="en">Korea Water Resources Corporation partners with US largest water association to support domestic water firms&#x27; US entry</span></div>
+        <div class="ko">수자원공사, 美 최대 수도협회와 국내 물기업 미국진출 지원</div>
+        <div class="meta"><span class="src">뉴스핌</span><span class="when">17h ago</span><span class="head">수자원공사, 美 최대 수도협회와 &#x27;맞손&#x27;…국내 물기업 미국진출 지원</span></div>
       </a></div>
         </section>
 
         <section class="cat">
           <h2><span class="emoji">💰</span>Funding
-              <span class="count">3</span></h2>
+              <span class="count">5</span></h2>
           <div class="cards">
+      <a class="card starred" href="https://news.google.com/rss/articles/CBMiYEFVX3lxTE1hRVpmZWF6OEgydW5GWmJDa2lKTTFnV2pXMlBEUkR5Qm40ZTdBWS1kNVhLZWN4Qi04VWNfNVFOeXJQZzhPMW10MnN1THllejBEa2Q1TWJIZkwtckpKby1PUQ?oc=5" target="_blank" rel="noopener">
+        <div class="row"><span class="star">★</span><span class="badge">AI</span><span class="en">Ryuten CEO Lee Se-young: started with 3M won game show prize, overseas revenue now exceeds Korea sales</span></div>
+        <div class="ko">뤼튼 이세영 대표, 해외서 국내 매출 넘어섰다</div>
+        <div class="meta"><span class="src">메트로신문</span><span class="when">17h ago</span><span class="head">[CEO와칭]골든벨 상금 300만원으로 시작…이세영 뤼튼 대표, 해외서 국내 매출 넘어섰다</span></div>
+      </a>
+      <a class="card" href="https://news.google.com/rss/articles/CBMiVEFVX3lxTE1rSlJDVlFqM0ZfM2gtdzJ4SXlqa0tudzZPd3UxS3hWU2RJamh5bVlTbjVRYzA0TlFKd0Z6NkFmanZ2bThvUDYwbHlpbkxIR0NCRjVvRQ?oc=5" target="_blank" rel="noopener">
+        <div class="row"><span class="badge">Robotics</span><span class="en">Differential Robotics secures Series A2 funding; develops GPS-less drone technology</span></div>
+        <div class="ko">디퍼렌셜 로보틱스, A2 라운드 유치…GPS 안 잡히는 곳에서 나는 드론</div>
+        <div class="meta"><span class="src">AI 매터스</span><span class="when">16h ago</span><span class="head">디퍼렌셜 로보틱스, A2 라운드 유치…GPS 안 잡히는 곳에서 나는 드론 만든다</span></div>
+      </a>
+      <a class="card" href="https://news.google.com/rss/articles/CBMibEFVX3lxTE9YenU4dVlqM1RUTkd2QTJ4Qmt1TlJLOFhfZGRNdzFFSUpfQ1BWalFsQVFiSFdMSzFuX3Jkc0cyZ0g2b2twN2hKcDBxV1o0X1YtREJZbWF4UVVHa1RJbjNKck5VN25wM2dENDU2Vg?oc=5" target="_blank" rel="noopener">
+        <div class="row"><span class="badge">AI</span><span class="en">Antioch, physical AI simulation startup, secures $32 million Series A funding</span></div>
+        <div class="ko">피지컬 AI 시뮬레이션 스타트업 안티오크, 3200만달러 시리즈A 유치</div>
+        <div class="meta"><span class="src">로봇신문</span><span class="when">20h ago</span><span class="head">피지컬 AI 시뮬레이션 스타트업 &#x27;안티오크&#x27;, 3200만달러 시리즈A 유치</span></div>
+      </a>
       <a class="card" href="https://news.google.com/rss/articles/CBMiT0FVX3lxTE9MaVY1T3BTTThTVk1IY2lHTDlHT3lZVkVuVjBBU3RDeU1xUmlwbkh1MU9sVVVsdW1pY18wWXVqS1RiR3h0WWZQQnF0WFAyYTA?oc=5" target="_blank" rel="noopener">
-        <div class="en">Semiconductor foundry Fab2 raises $500 million funding round</div>
-        <div class="ko">반도체 팹2, 5억 달러 투자유치</div>
-        <div class="meta"><span class="src">와우테일</span><span class="head">반도체 팹 양산 팹2, 5억 달러 투자유치…기업가치 37억 달러</span></div>
+        <div class="row"><span class="badge">Semiconductor</span><span class="en">Semiconductor fab Fab2 raises $500 million; company valuation reaches $3.7 billion</span></div>
+        <div class="ko">반도체 팹 양산 팹2, 5억 달러 투자유치…기업가치 37억 달러</div>
+        <div class="meta"><span class="src">와우테일</span><span class="when">yesterday</span><span class="head">반도체 팹 양산 팹2, 5억 달러 투자유치…기업가치 37억 달러</span></div>
       </a>
-
-      <a class="card" href="https://news.google.com/rss/articles/CBMiakFVX3lxTFBsNzh0dElZaUJOaHVkcW1hX3RXT0tXWWpzOUJNc2h3ZTNwQU5ISlUxalJiNHZQTklpRk5NRTU0WlYtV2lJX3h4akdyRVVaNlZYVnNSTWlvNUlDMlBFREVKYWt5RVFtQV9GLWc?oc=5" target="_blank" rel="noopener">
-        <div class="en">Samsung Electronics leads Mistral AI Series D funding of 3 billion euros</div>
-        <div class="ko">삼성전자 주도, 미스트랄 AI 30억유로 투자</div>
-        <div class="meta"><span class="src">월요신문</span><span class="head">AI기업 미스트랄, 30억유로 투자 유치…삼성전자 주도</span></div>
-      </a>
-
-      <a class="card" href="https://news.google.com/rss/articles/CBMiT0FVX3lxTE55ZUJORUwwemM3YVU5OUxHQ01uampwMU5nU0lwdjRXRG9LOFZwbUs1UzhUU0tIZl9QSFd2S29QVkNsYU5tNWVfNGxCQTBpNkE?oc=5" target="_blank" rel="noopener">
-        <div class="en">Samsung Electronics leads Mistral AI sovereign AI 3 billion euro Series D</div>
-        <div class="ko">삼성전자 주도 미스트랄 30억유로 시리즈D</div>
-        <div class="meta"><span class="src">와우테일</span><span class="head">삼성전자 주도, 소버린 AI 미스트랄 30억유로 시리즈D 유치</span></div>
+      <a class="card" href="https://news.google.com/rss/articles/CBMimwFBVV95cUxNajRmS09XWGk0S2Y2UlNGbkVFSWFVdEJOSFRta0s1VDc3T2FMWHRxOGtEb3c0UHNsVmxKb1E3RFpMTDdOSkM5Uy1Ma1J4QWljelNDRWJqd2N0Y19qandxYy1fODhtM3dkam5Balc3enBQWGpOLXp2aEs2YUFTUWNnZzNpLTZfb09CczIxSUI5QkNBS0lOd2pjZGlfSQ?oc=5" target="_blank" rel="noopener">
+        <div class="row"><span class="badge">Deep Tech</span><span class="en">Kitronyx raises $1.5 million Series A for industrial pressure sensors</span></div>
+        <div class="ko">키트로닉스, 산업용 압력센서로 150만달러 시리즈A 유치</div>
+        <div class="meta"><span class="src">Dealroom</span><span class="when">yesterday</span><span class="head">Kitronyx raises $1.5M Series A for industrial pressure sensors</span></div>
       </a></div>
         </section>
 
@@ -168,60 +175,55 @@
           <h2><span class="emoji">📈</span>IPO / Listing
               <span class="count">4</span></h2>
           <div class="cards">
-      <a class="card" href="https://news.google.com/rss/articles/CBMiXEFVX3lxTE5reDdzOTlndFVuejJqQXpLWUtIV3Q0UEVnanliVWE0OTJQN0hTSF9Oa2JodVNzQmxjUzI4TTNjSFpvcmxkUXQtVGxvWkpZaFdXMlNiMi1IWUlCZmY4?oc=5" target="_blank" rel="noopener">
-        <div class="en">C&amp;M seeks KOSDAQ listing via preliminary examination</div>
-        <div class="ko">씨앤엠, 코스닥 상장예비심사 청구</div>
-        <div class="meta"><span class="src">뉴스핌</span><span class="head">씨앤엠, 코스닥 상장예비심사 청구</span></div>
+      <a class="card secondary starred" href="https://news.google.com/rss/articles/CBMiT0FVX3lxTE4tdEFlQ2x2YjlYdjZfUWE2OFlrVm5GM2JZNkhRRGRsTzl2Wm1xdkF6eU1fVllBVDJNXzdzNjRKQlF5WHFYSGhEdXR6aFN6T3c?oc=5" target="_blank" rel="noopener">
+        <div class="row"><span class="star">★</span><span class="badge muted">Other</span><span class="en">Megazone Cloud pursues IPO: scaling amid profitability and parent company risk</span></div>
+        <div class="ko">메가존클라우드, IPO 추진…수익성·모회사 리스크 시험대</div>
+        <div class="meta"><span class="src">v.daum.net</span><span class="when">yesterday</span><span class="head">IPO 추진 메가존클라우드, 몸집 키웠지만 수익성·모회사 리스크 시험대</span></div>
       </a>
-
-      <a class="card" href="https://news.google.com/rss/articles/CBMigAFBVV95cUxNNXNKeUxINTNKX3Y3UjEwQk9aZHByZEtzM2pMdzZyZ2l5NHBuSS0tYVI3RlBLai1LUGR3RmNGblNNQXpMWjFvZGl6a0FBNnMwRm1FYXdIMDg1Q25WN1cwQU5iSEZlcWcyX25ob0lEcXpiZm1ZQlpOWnJ1UTNpb1FNWg?oc=5" target="_blank" rel="noopener">
-        <div class="en">C&amp;M electric drive solution firm targets KOSDAQ listing this year</div>
-        <div class="ko">씨앤엠, 연내 코스닥 상장 목표</div>
-        <div class="meta"><span class="src">edaily.co.kr</span><span class="head">&#x27;전동 구동 솔루션&#x27; 씨앤엠, 코스닥 상장예심 청구…연내 상장 목표</span></div>
-      </a>
-
       <a class="card" href="https://news.google.com/rss/articles/CBMibkFVX3lxTE5USTRWX3JZU1A3LWN4akdvSUJlSy1QRjZtV3ZIc0NyeDF3V3NHLTI4ZThyQUp2NlJJbnZGU3NtZjhWMkEyVmY2ejY0NlN3dWhYWWkzX01VUEJKXzRvSFd6V1AtRGRuRWVLajBmSFdB?oc=5" target="_blank" rel="noopener">
-        <div class="en">BigWave Robotics IPO led by Daishin Securities, physical AI focus</div>
-        <div class="ko">빅웨이브로보틱스 IPO 대표주관, 피지컬 AI</div>
-        <div class="meta"><span class="src">이지경제</span><span class="head">유진투자증권, 빅웨이브로보틱스 IPO 대표주관...‘피지컬 AI’ 정조준</span></div>
+        <div class="row"><span class="badge">Robotics</span><span class="en">Yugin Investment Securities leads Big Wave Robotics IPO as physical AI target</span></div>
+        <div class="ko">유진투자증권, 빅웨이브로보틱스 IPO 대표주관…피지컬 AI 정조준</div>
+        <div class="meta"><span class="src">이지경제</span><span class="when">18h ago</span><span class="head">유진투자증권, 빅웨이브로보틱스 IPO 대표주관...‘피지컬 AI’ 정조준</span></div>
+      </a><div class="divider">other sectors</div>
+      <a class="card secondary" href="https://news.google.com/rss/articles/CBMiVkFVX3lxTE5NSTR1TS1tSXd0dDQxMWJEQ2ZKWlNXU0VGWFpWR2t5X0Q3amtfQ216eTVKV29PWHFaVGxabEtia2xlRlFDV01lb2djVzFBVmdCREswTXlR?oc=5" target="_blank" rel="noopener">
+        <div class="row"><span class="badge muted">Other</span><span class="en">C&amp;M submits KOSDAQ listing preliminary review; targets listing within year</span></div>
+        <div class="ko">씨앤엠, 코스닥 상장예비심사 제출…연내 상장 목표</div>
+        <div class="meta"><span class="src">지디넷코리아</span><span class="when">10m ago</span><span class="head">씨앤엠, 코스닥 상장예비심사 제출…연내 상장 목표</span></div>
       </a>
-
-      <a class="card" href="https://news.google.com/rss/articles/CBMiXEFVX3lxTE1ydFVzekhkU3QtdVZvU2paczZiQkRKbHZ2Y1dfMmxxNmc4YXU3blFvWDVzZ2pnQUdad2ItbHBEMHR2MjlRYzluZEp3TWpXRFAyZkNsbDl2bWROb3hk?oc=5" target="_blank" rel="noopener">
-        <div class="en">BaroPharma accelerates KOSDAQ listing with up to 36 billion won offering</div>
-        <div class="ko">바로팜, 최대 360억 공모로 코스닥 상장</div>
-        <div class="meta"><span class="src">뉴스핌</span><span class="head">바로팜, 최대 360억 공모로 코스닥 상장 본격화</span></div>
-      </a></div>
-        </section>
-
-        <section class="cat">
-          <h2><span class="emoji">🔗</span>Supplier / Ecosystem
-              <span class="count">2</span></h2>
-          <div class="cards">
-      <a class="card" href="https://news.google.com/rss/articles/CBMiX0FVX3lxTFAyYU9PVWktMzR3VkJIVllyeVZOTmlCOTRtdkRrMFhZdEdXd2N2VGdLR09tXzJ4YkVXdGFidkc5cUlJdmFxa3JmVHlWdnVJcHNDTng3MlJuRk5uRVQ0UmpZ?oc=5" target="_blank" rel="noopener">
-        <div class="en">MangoBoost AI startup backed by Samsung Electronics achieves profitability</div>
-        <div class="ko">삼성전자 지원 망고부스트, 흑자 전환 성공</div>
-        <div class="meta"><span class="src">스마트투데이</span><span class="head">&#x27;삼성전자 PICK&#x27; AI 스타트업 망고부스트, 흑자 전환 성공…&quot;가성비 AI 데이터센터 수요 급증&quot;</span></div>
-      </a>
-
-      <a class="card" href="https://news.google.com/rss/articles/CBMigwFBVV95cUxPRWlZRVdETXNZbjN4QzdJdE1jeVJVdzJ1LVJWZFV5azdRSWRsZW9nVTkyYWxQRHdzSm9HUUdmWGU4Nnl2REpVdnBGcDBEb09Rb3QxemNZWFFUSXhTU3NnNnU3RUxpanpQX0V3SDZpdGV4U3NLQlR4eW9LWGc2NjVCR0F4VQ?oc=5" target="_blank" rel="noopener">
-        <div class="en">Hyundai Boston eyes LG Electronics BareRobotics NASDAQ listing</div>
-        <div class="ko">현대차 보스턴, LG 베어로보틱스 나스닥 상장 주목</div>
-        <div class="meta"><span class="src">investchosun.com</span><span class="head">현대차 &#x27;보스턴&#x27;이 LG전자 베어로보틱스의 나스닥行 쳐다보는 이유</span></div>
+      <a class="card secondary" href="https://news.google.com/rss/articles/CBMiXEFVX3lxTE1ydFVzekhkU3QtdVZvU2paczZiQkRKbHZ2Y1dfMmxxNmc4YXU3blFvWDVzZ2pnQUdad2ItbHBEMHR2MjlRYzluZEp3TWpXRFAyZkNsbDl2bWROb3hk?oc=5" target="_blank" rel="noopener">
+        <div class="row"><span class="badge muted">Bio</span><span class="en">Baropharma begins KOSDAQ listing in earnest with up to 36 billion won IPO</span></div>
+        <div class="ko">바로팜, 최대 360억 공모로 코스닥 상장 본격화</div>
+        <div class="meta"><span class="src">뉴스핌</span><span class="when">yesterday</span><span class="head">바로팜, 최대 360억 공모로 코스닥 상장 본격화</span></div>
       </a></div>
         </section>
 
         <section class="cat">
           <h2><span class="emoji">•</span>Other Notable
-              <span class="count">1</span></h2>
+              <span class="count">4</span></h2>
           <div class="cards">
-      <a class="card" href="https://news.google.com/rss/articles/CBMib0FVX3lxTE1GcVdaSkF0TVRDWkVoaUFBMDZCaXFqb050YUVuMURReDRoMW1vS01pTy1DSUoyTGxUMlRkNTZNTGxySmVLanVibFUycmJvRHhtODUwbmxkWFRmdjE3NFVvVXRGbHc3LXZlQmUwNFFOVQ?oc=5" target="_blank" rel="noopener">
-        <div class="en">Samsung Group launches physical AI robot Team REX initiative</div>
-        <div class="ko">삼성그룹, 피지컬AI 로봇 REX팀 출범</div>
-        <div class="meta"><span class="src">마켓잉크</span><span class="head">삼성그룹, 피지컬AI 로봇 어벤져스 &#x27;REX팀&#x27; 출범 ..참여 기업은?</span></div>
+      <a class="card starred" href="https://news.google.com/rss/articles/CBMiogFBVV95cUxOWnUzWVFHVFNhcDVKQ24zNWd2WHVGU3JIal8xeGlOZkY4QTZCbUJwSWZaZ3dzMHhUMG0tZGNrdXNBc1pKaTBjSFo0RWNxVzRYZUNDTml6SXpNVE9EbF9GTlB3QnJHQ3RHWUNIeS1Bd19hNXdBX2ktV0pFQ2taOFhaaTVUTzU1ajZESzdHLXkyV21XTUdqYzd3MWRqQUJ5RC1lV3c?oc=5" target="_blank" rel="noopener">
+        <div class="row"><span class="star">★</span><span class="badge">AI</span><span class="en">StradVision eyes robots and drones for physical AI push</span></div>
+        <div class="ko">스트래드비전, 로봇·드론으로 피지컬AI 추진</div>
+        <div class="meta"><span class="src">Seoul Economic Daily</span><span class="when">3h ago</span><span class="head">StradVision Eyes Robots and Drones for Physical AI Push</span></div>
+      </a>
+      <a class="card secondary starred" href="https://news.google.com/rss/articles/CBMidkFVX3lxTE5CQ1BlR1VYQ3JJRzRoYUhUNHFQS0lBUlB6SkU2QlBEdm1sZzFzQ1RoTkNlY0pZQzE2VUs0NWEzTU9ROU01ZkxyNjRpTWVOM0o3YUMxbU5mY09kZ2dCSTU4MnBKZEdTTHFGcXlvanJQUXdzZ3luVWc?oc=5" target="_blank" rel="noopener">
+        <div class="row"><span class="star">★</span><span class="badge muted">Other</span><span class="en">Alteogen target price cut after Novartis AOC phase 3 failure</span></div>
+        <div class="ko">알테오젠, 노바르티스 AOC 임상 3상 실패 후 목표주가 인하</div>
+        <div class="meta"><span class="src">finance.biggo.com</span><span class="when">23h ago</span><span class="head">Shinhan Securities Cuts Alteogen Target to ₩520,000 After Novartis AOC Phase 3 Failure</span></div>
+      </a>
+      <a class="card secondary starred" href="https://news.google.com/rss/articles/CBMipgFBVV95cUxNSzRmVEtTalNUTXlacUt1b2p4d3JtbVdCNnRmX0cxUExKcXpONEtncWFDSkNJOWJRdVcxNGRKQl9IMS15OTVRel9fVHd2RmdhUGtEYUVyWnNDSHAybWI5RHlwWHJkay1qbzljWXFrUW1mNkVya09qVXpKeVNTRUp3VTh5VGxBczFQd29PV3ZzWmJBMFlvckliUTJicmZDSmtieWlvRHFB?oc=5" target="_blank" rel="noopener">
+        <div class="row"><span class="star">★</span><span class="badge muted">Bio</span><span class="en">Novartis taps Alteogen&#x27;s ALT-B4 for SC drug delivery in $3 billion deal</span></div>
+        <div class="ko">노바르티스, 알테오젠 ALT-B4 피하주사 약물전달 30억달러 계약</div>
+        <div class="meta"><span class="src">BioWorld News</span><span class="when">yesterday</span><span class="head">Novartis taps Alteogen’s ALT-B4 for SC drug delivery in $3B deal</span></div>
+      </a>
+      <a class="card" href="https://news.google.com/rss/articles/CBMiaEFVX3lxTE9SR2tlZUFQcmlFaXJoYlhaV3Y3NWVRdDVCU0wxaGI5RzZQdzc1ZFBncFRxSzZHb21JYkt3cU4wUnI4T2ZKNEREZWlFNjdoWm9ZZ202YzM2TXViZ2pXRkpyMl90ZnpWb1V3?oc=5" target="_blank" rel="noopener">
+        <div class="row"><span class="badge">Robotics</span><span class="en">Hurim Robotics shows weakness despite national growth fund robot investment news</span></div>
+        <div class="ko">휴림로봇, 국민성장펀드 로봇 투자 소식에도 장중 약세</div>
+        <div class="meta"><span class="src">CBC뉴스</span><span class="when">23m ago</span><span class="head">휴림로봇, 국민성장펀드 로봇 투자 소식에도 장중 약세…6340원서 숨고르기</span></div>
       </a></div>
         </section>
     <footer>
-      <span>Generated 00:32 UTC · Google News + Claude</span>
+      <span>Generated 00:59 UTC · Google News + Claude</span>
       <span>Tune what it catches in <span class="tune">config.py</span></span>
     </footer>
   </div>
