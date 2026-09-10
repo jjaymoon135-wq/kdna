@@ -1,18 +1,12 @@
 # ==========================================================================
 #  KOREA CRE RADAR  —  CONFIG
 #  This is the ONE file you edit to tune what the radar catches.
-#  Everything below is a plain list. Add / remove / reword lines freely.
 #  After editing, commit the change — the next morning's run uses it.
 # ==========================================================================
 
 # --------------------------------------------------------------------------
-# 1) SEARCH QUERIES
-#    Each string is run as its own Google News search (Korean + English).
-#    Keep them specific enough to avoid noise, broad enough to catch signal.
-#    Tip: after a week, look at what got through and what didn't, and tune here.
+# 1) SEARCH QUERIES  (each string = its own Google News search)
 # --------------------------------------------------------------------------
-
-# Korean-language queries (searched on Korean Google News)
 QUERIES_KO = [
     "한국 기업 미국 진출",
     "한국 기업 미국 공장",
@@ -37,7 +31,6 @@ QUERIES_KO = [
     "스타트업 실리콘밸리 진출",
 ]
 
-# English-language queries (searched on US Google News)
 QUERIES_EN = [
     "Korean company US expansion",
     "South Korea US factory investment",
@@ -48,7 +41,7 @@ QUERIES_EN = [
     "Samsung supplier US site",
     "Hyundai supplier US plant",
     "Korean semiconductor startup funding",
-    "Korean fabless chip comapny US",
+    "Korean fabless chip company US",
     "Korean chip equipment company US expansion",
     "Korean AI startup Series funding",
     "Korean AI chip startup",
@@ -57,6 +50,8 @@ QUERIES_EN = [
     "Korean autonomous driving startup US",
     "Korean startup Silicon Valley",
 ]
+
+# ---- SECONDARY sectors (kept, shown lower & de-emphasized) ----
 QUERIES_SECONDARY_KO = [
     "K뷰티 미국 진출",
     "화장품 브랜드 미국 진출",
@@ -74,61 +69,70 @@ QUERIES_SECONDARY_EN = [
     "Korean consumer brand US expansion",
 ]
 
+# --------------------------------------------------------------------------
+# 2) EXCLUDE -- big chaebol you already serve (dropped from results).
+#    NOTE: you removed LG and the second-tier chaebol (POSCO, Lotte, etc.).
+#    If you want LG excluded too, add "LG", "엘지" back to this list.
+# --------------------------------------------------------------------------
 EXCLUDE_COMPANIES = [
-    "Samsung", "삼성", 
-    "SK hynix", "SK", "SK 하이닉스",
+    "Samsung", "삼성",
+    "SK hynix", "SK하이닉스", "SK",
     "Hyundai", "현대", "Kia", "기아",
-    "Hanwha", "한화", 
+    "Hanwha", "한화",
 ]
 
+# --------------------------------------------------------------------------
+# 2b) WATCHLIST -- specific companies tracked BY NAME.
+#     Each becomes its own search AND gets starred + floated to the top of
+#     its section when it appears.
+# --------------------------------------------------------------------------
 WATCHLIST = [
-    "DeepX", "Rainbow Robotics", "Daeduck Electronics", "대덕전자", "Fadu Technology", "LX Semicon", "LS Electric", "파두", "HyperAccel", "Dongjin Semichem", "동진쎄미켐", "Marqvision", "Mobilint",
-    "모빌린트", "Point2 Technology", "XL8", "Openedges", "Neuromeka", "뉴로메카", "Bear Robotics", "베어 로보틱스", "VESSL AI", "SEMIFIVE", "Panmnesia", "Bitsensing", "Asicland", "에이직랜드", "DeepBrain",
-    "Nota AI", "WIRobotics", "Xpanner", "MakinaRocks", "HL Mando", "Chips & Media", "SFA Semicon", "ABOV Semiconductor", "Nepes", "네페스", "Alphachips", "SEMES", "EUGENETECH", "유진테크", "STRADVISION",
-    "Mangoboost", "Hanmi Semiconductor", "한미반도체", "Megazonecloud", "메가존클라우드", "Mobiltech US", "Zenix Robotics", "Lablup", "FriendliAI", "Phyxup", "CLIKA", "Sendbird", "QueryPie", "Deft Robotics",
-    "SUPERB AI", "Contoro Robotics", "Magnachip Semiconductor", "Upstage AI", "Alteogen", "Intellian Technology", "Robotis", "Wrtn", "뤼튼",
-]
-# --------------------------------------------------------------------------
-# 2) ANCHOR COMPANIES
-#    When these move, their tier-1 suppliers follow — the gettable clients.
-#    Listed so the AI knows to flag supplier/ecosystem moves around them.
-#    (Add or trim to match the accounts your team actually tracks.)
-# --------------------------------------------------------------------------
-ANCHOR_COMPANIES = [
-    "Samsung Electronics", "Samsung SDI", "Samsung SDS",
-    "SK hynix", "SK On", "SK Siltron",
-    "Hyundai Motor", "Kia", "Hyundai Mobis",
-    "LG Energy Solution", "LG Chem", "LG Electronics",
-    "POSCO", "Hanwha", "Doosan",
+    "DeepX", "Rainbow Robotics", "Daeduck Electronics", "대덕전자",
+    "Fadu Technology", "LX Semicon", "LS Electric", "파두", "HyperAccel",
+    "Dongjin Semichem", "동진쎄미켐", "Marqvision", "Mobilint", "모빌린트",
+    "Point2 Technology", "XL8", "Openedges", "Neuromeka", "뉴로메카",
+    "Bear Robotics", "베어 로보틱스", "VESSL AI", "SEMIFIVE", "Panmnesia",
+    "Bitsensing", "Asicland", "에이직랜드", "DeepBrain", "Nota AI",
+    "WIRobotics", "Xpanner", "MakinaRocks", "HL Mando", "Chips & Media",
+    "SFA Semicon", "ABOV Semiconductor", "Nepes", "네페스", "Alphachips",
+    "SEMES", "EUGENETECH", "유진테크", "STRADVISION", "Mangoboost",
+    "Hanmi Semiconductor", "한미반도체", "Megazonecloud", "메가존클라우드",
+    "Mobiltech US", "Zenix Robotics", "Lablup", "FriendliAI", "Phyxup",
+    "CLIKA", "Sendbird", "QueryPie", "Deft Robotics", "SUPERB AI",
+    "Contoro Robotics", "Magnachip Semiconductor", "Upstage AI", "Alteogen",
+    "Intellian Technology", "Robotis", "Wrtn", "뤼튼",
 ]
 
 # --------------------------------------------------------------------------
-# 3) CATEGORIES
-#    How each item gets bucketed on the page. Order = display order.
-#    key must be unique; label is what you see; emoji is decoration.
+# 3) SECTORS -- priority tiers. AI tags each kept item with one.
+#    "primary" = tech focus (top of each section). "secondary" = below divider.
+# --------------------------------------------------------------------------
+SECTORS = [
+    {"key": "semiconductor", "label": "Semiconductor", "priority": "primary"},
+    {"key": "ai",            "label": "AI",            "priority": "primary"},
+    {"key": "robotics",      "label": "Robotics",      "priority": "primary"},
+    {"key": "deeptech",      "label": "Deep Tech",     "priority": "primary"},
+    {"key": "beauty",        "label": "Beauty",        "priority": "secondary"},
+    {"key": "bio",           "label": "Bio",           "priority": "secondary"},
+    {"key": "retail",        "label": "Retail",        "priority": "secondary"},
+    {"key": "finance",       "label": "Finance",       "priority": "secondary"},
+    {"key": "other",         "label": "Other",         "priority": "secondary"},
+]
+
+# --------------------------------------------------------------------------
+# 4) SIGNAL CATEGORIES -- how the page is grouped. Order = display order.
 # --------------------------------------------------------------------------
 CATEGORIES = [
-    {"key": "us_expansion", "label": "US Expansion",        "emoji": "🇺🇸"},
-    {"key": "funding",      "label": "Funding",             "emoji": "💰"},
-    {"key": "ipo",          "label": "IPO / Listing",       "emoji": "📈"},
-    {"key": "supplier",     "label": "Supplier / Ecosystem","emoji": "🔗"},
-    {"key": "other",        "label": "Other Notable",       "emoji": "•"},
+    {"key": "us_expansion", "label": "US Expansion", "emoji": "🇺🇸"},
+    {"key": "funding",      "label": "Funding",      "emoji": "💰"},
+    {"key": "ipo",          "label": "IPO / Listing","emoji": "📈"},
+    {"key": "other",        "label": "Other Notable","emoji": "•"},
 ]
 
 # --------------------------------------------------------------------------
-# 4) TUNING KNOBS
+# 5) TUNING KNOBS
 # --------------------------------------------------------------------------
-# How many hours back to look. Runs daily; 36h gives overlap so nothing
-# slips through the cracks between runs. Dedup handles the overlap.
 LOOKBACK_HOURS = 36
-
-# The Claude model used for filtering + summarizing. Haiku is cheapest and
-# more than good enough for this. Change only if you have a reason to.
 CLAUDE_MODEL = "claude-haiku-4-5-20251001"
-
-# Max headlines sent to the AI in one batch. Keeps cost + context sane.
 MAX_ITEMS_TO_JUDGE = 200
-
-# Timezone label shown on the page (display only — schedule is set in the
-# GitHub Actions workflow file).
 DISPLAY_TZ = "America/Los_Angeles"
