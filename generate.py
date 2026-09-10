@@ -256,10 +256,15 @@ def enrich(items, judged):
 # --------------------------------------------------------------------------
 # STEP 4 — RENDER
 # --------------------------------------------------------------------------
-def render_html(by_cat):
-    now = datetime.now(timezone.utc)
-    total = sum(len(v) for v in by_cat.values())
-    date_str = now.strftime("%A, %B %-d, %Y")
+def render_sections(signals):
+    """Render a flat list of signals into category sections (tech-first,
+    watchlist starred, secondary below a divider). Reused by every tab."""
+    by_cat = {c["key"]: [] for c in config.CATEGORIES}
+    for s in signals:
+        cat = s.get("category", "other")
+        if cat not in by_cat:
+            cat = "other"
+        by_cat[cat].append(s)
 
     sections = []
     for c in config.CATEGORIES:
@@ -270,9 +275,8 @@ def render_html(by_cat):
         rest = [r for r in rows if not r.get("starred")]
         primary = [r for r in rest if r.get("priority") == "primary"]
         secondary = [r for r in rest if r.get("priority") != "primary"]
-        starred.sort(key=lambda x: x["published"], reverse=True)
-        primary.sort(key=lambda x: x["published"], reverse=True)
-        secondary.sort(key=lambda x: x["published"], reverse=True)
+        for lst in (starred, primary, secondary):
+            lst.sort(key=lambda x: x.get("published") or "", reverse=True)
 
         inner = "".join(render_card(r) for r in starred)
         inner += "".join(render_card(r) for r in primary)
@@ -287,13 +291,51 @@ def render_html(by_cat):
               <span class="count">{len(rows)}</span></h2>
           <div class="cards">{inner}</div>
         </section>""")
+    return "\n".join(sections) if sections else EMPTY_STATE
 
-    body = "\n".join(sections) if sections else EMPTY_STATE
+
+def month_bucket(item):
+    """Return 'YYYY-MM' for an item, by published date (fallback first_seen)."""
+    d = item.get("published") or item.get("first_seen") or ""
+    try:
+        return datetime.fromisoformat(d).strftime("%Y-%m")
+    except ValueError:
+        return None
+
+
+def render_html(archive):
+    now = datetime.now(timezone.utc)
+    date_str = now.strftime("%A, %B %-d, %Y")
+
+    # --- Latest tab: everything first seen on the most recent run date ---
+    latest_date = max((a.get("first_seen", "") for a in archive), default="")[:10]
+    latest = [a for a in archive if a.get("first_seen", "")[:10] == latest_date]
+
+    # --- Month tabs ---
+    months = {}
+    for a in archive:
+        mk = month_bucket(a)
+        if mk:
+            months.setdefault(mk, []).append(a)
+    month_order = sorted(months.keys(), reverse=True)
+
+    # Build tab buttons + panels
+    tabs = ['<button class="tab active" data-panel="latest">Latest</button>']
+    panels = [f'<div class="panel active" id="panel-latest">{render_sections(latest)}</div>']
+    for mk in month_order:
+        label = datetime.strptime(mk, "%Y-%m").strftime("%b %Y")
+        pid = "m" + mk.replace("-", "")
+        tabs.append(f'<button class="tab" data-panel="{pid}">{html.escape(label)}'
+                    f'<span class="tab-count">{len(months[mk])}</span></button>')
+        panels.append(f'<div class="panel" id="panel-{pid}">{render_sections(months[mk])}</div>')
+
     return PAGE.format(
         date=html.escape(date_str),
-        total=total,
+        latest_count=len(latest),
+        total=len(archive),
         generated=now.strftime("%H:%M UTC"),
-        body=body,
+        tabs="\n".join(tabs),
+        panels="\n".join(panels),
     )
 
 
@@ -460,6 +502,26 @@ PAGE = """<!DOCTYPE html>
   .empty-mark {{ font-family:"Fraunces",serif; font-size: 48px; color: var(--line); }}
   .empty-sub {{ font-size: 13px; }}
 
+  .tabs {{
+    display: flex; gap: 4px; flex-wrap: wrap; margin: 18px 0 4px;
+    border-bottom: 1px solid var(--line); padding-bottom: 0;
+  }}
+  .tab {{
+    font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer;
+    color: var(--muted); background: none; border: none;
+    padding: 7px 12px 9px; border-bottom: 2px solid transparent;
+    margin-bottom: -1px; display: inline-flex; align-items: center; gap: 6px;
+  }}
+  .tab:hover {{ color: var(--ink); }}
+  .tab.active {{ color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }}
+  .tab-count {{
+    font-size: 10.5px; font-weight: 600; color: var(--muted);
+    background: var(--accent-soft); padding: 1px 6px; border-radius: 10px;
+  }}
+  .tab.active .tab-count {{ color: var(--accent); }}
+  .panel {{ display: none; }}
+  .panel.active {{ display: block; }}
+
   footer {{ margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line);
     font-size: 12px; color: var(--muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; }}
   a.tune {{ color: var(--accent); text-decoration: none; }}
@@ -484,16 +546,31 @@ PAGE = """<!DOCTYPE html>
         <span class="sub">Korean companies → US expansion · funding · listings</span>
       </h1>
       <div class="stamp">
-        <div class="count">{total} signals</div>
+        <div class="count">{latest_count} latest</div>
         <div>{date}</div>
       </div>
     </header>
-    {body}
+    <nav class="tabs">
+    {tabs}
+    </nav>
+    {panels}
     <footer>
-      <span>Generated {generated} · Google News + Claude</span>
+      <span>Generated {generated} · {total} archived · Google News + Claude</span>
       <span>Tune what it catches in <span class="tune">config.py</span></span>
     </footer>
   </div>
+  <script>
+    document.querySelectorAll('.tab').forEach(function (t) {{
+      t.addEventListener('click', function () {{
+        var id = t.getAttribute('data-panel');
+        document.querySelectorAll('.tab').forEach(function (x) {{ x.classList.remove('active'); }});
+        document.querySelectorAll('.panel').forEach(function (x) {{ x.classList.remove('active'); }});
+        t.classList.add('active');
+        var p = document.getElementById('panel-' + id);
+        if (p) p.classList.add('active');
+      }});
+    }});
+  </script>
 </body>
 </html>"""
 
@@ -520,17 +597,70 @@ def process(items):
     return by_cat
 
 
+ARCHIVE_PATH = "docs/archive.json"
+
+
+def signal_key(item):
+    """Stable identity for cross-day dedup: URL if present, else title."""
+    link = (item.get("link") or "").strip()
+    if link:
+        return "u:" + link
+    return "t:" + normalize(item.get("title", ""))[:80]
+
+
+def load_archive():
+    try:
+        with open(ARCHIVE_PATH, encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, list) else []
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+
+
+def save_archive(archive):
+    os.makedirs("docs", exist_ok=True)
+    with open(ARCHIVE_PATH, "w", encoding="utf-8") as f:
+        json.dump(archive, f, ensure_ascii=False, indent=1)
+
+
+def flatten(by_cat):
+    """Turn the category dict into a flat list, category stamped on each item."""
+    out = []
+    for cat_key, rows in by_cat.items():
+        for r in rows:
+            out.append({**r, "category": cat_key})
+    return out
+
+
+def merge_into_archive(archive, todays, now_iso):
+    """Append today's new signals; skip any already stored (by signal_key)."""
+    seen = {signal_key(a) for a in archive}
+    added = 0
+    for s in todays:
+        k = signal_key(s)
+        if k in seen:
+            continue
+        archive.append({**s, "first_seen": now_iso})
+        seen.add(k)
+        added += 1
+    return added
+
+
 def main():
     print("Korea CRE Radar — building today's page")
     raw = fetch_all()
     items = dedup(raw)
 
     by_cat = process(items)
+    todays = flatten(by_cat)
+    print(f"  kept {len(todays)} signals after AI filter")
 
-    kept = sum(len(v) for v in by_cat.values())
-    print(f"  kept {kept} signals after AI filter")
+    archive = load_archive()
+    added = merge_into_archive(archive, todays, datetime.now(timezone.utc).isoformat())
+    print(f"  archive: +{added} new, {len(archive)} total")
+    save_archive(archive)
 
-    out_html = render_html(by_cat)
+    out_html = render_html(archive)
     os.makedirs("docs", exist_ok=True)
     with open("docs/index.html", "w", encoding="utf-8") as f:
         f.write(out_html)
@@ -539,4 +669,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
