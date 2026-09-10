@@ -134,5 +134,5 @@ CATEGORIES = [
 # --------------------------------------------------------------------------
 LOOKBACK_HOURS = 36
 CLAUDE_MODEL = "claude-haiku-4-5-20251001"
-MAX_ITEMS_TO_JUDGE = 200
+MAX_ITEMS_TO_JUDGE = 300
 DISPLAY_TZ = "America/Los_Angeles"
