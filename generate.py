@@ -44,7 +44,16 @@ def fetch_all():
     """Run every query, collect raw items. Returns list of dicts."""
     items = []
     jobs = [(q, "ko") for q in config.QUERIES_KO] + \
-           [(q, "en") for q in config.QUERIES_EN]
+           [(q, "en") for q in config.QUERIES_EN] + \
+           [(q, "ko") for q in config.QUERIES_SECONDARY_KO] + \
+           [(q, "en") for q in config.QUERIES_SECONDARY_EN]
+
+    # Each watchlist name becomes its own search so we catch it by name.
+    # Language is guessed by whether the name contains Hangul.
+    for name in getattr(config, "WATCHLIST", []):
+        lang = "ko" if re.search(r"[가-힣]", name) else "en"
+        jobs.append((f'{name} 미국' if lang == "ko" else f"{name} US", lang))
+        jobs.append((name, lang))
 
     cutoff = datetime.now(timezone.utc) - timedelta(hours=config.LOOKBACK_HOURS)
 
@@ -119,29 +128,50 @@ def dedup(items):
 # --------------------------------------------------------------------------
 def build_prompt(items):
     cats = ", ".join(f'"{c["key"]}" ({c["label"]})' for c in config.CATEGORIES)
-    anchors = ", ".join(config.ANCHOR_COMPANIES)
+    sectors = ", ".join(f'"{s["key"]}" ({s["label"]})' for s in config.SECTORS)
+    excludes = ", ".join(config.EXCLUDE_COMPANIES)
     numbered = "\n".join(
         f'{i}. [{it["lang"]}] {it["title"]}' for i, it in enumerate(items)
     )
     return f"""You are a research analyst for a commercial real estate team that \
-serves Korean companies expanding into the United States. Below is today's raw \
-news headline pool. Your job is to keep ONLY items that signal one of these \
-things about a KOREAN company:
-- expansion / investment / a new site, plant, HQ, R&D or office in the US
-- a funding round (venture funding, capital raise)
-- an IPO or stock listing (Korea or US)
-- a tier-1 supplier or ecosystem move tied to a major anchor account
+serves Korean companies expanding into the United States. The team already serves \
+the giant conglomerates, so your job is to surface SMALLER, gettable companies — \
+mid-market firms and startups — NOT the chaebol.
 
-Anchor accounts whose supplier moves matter: {anchors}
+From the raw headline pool below, KEEP only items that signal one of these about a \
+Korean company:
+- US expansion / investment / a new site, plant, HQ, R&D center or office in the US
+- a funding round (venture funding, Series A/B/C, capital raise)
+- an IPO or stock listing (Korea KOSDAQ/KOSPI or US Nasdaq/NYSE)
 
-Discard anything irrelevant: general market commentary, non-Korean companies, \
-opinion, stock-price chatter, duplicates, sports, unrelated politics.
+HARD EXCLUSION — drop any headline that is centrally about these big conglomerates \
+or their divisions/subsidiaries: {excludes}. Also drop any other top-tier Korean \
+conglomerate (chaebol) even if not named. If a small company is mentioned only as \
+a SUPPLIER to one of these, and the small company is the real subject, KEEP it — \
+the focus is the smaller company, not the chaebol.
 
-For every item you KEEP, assign exactly one category from: {cats}
+Also discard: general market commentary, non-Korean companies, opinion pieces, \
+stock-price chatter, sports, unrelated politics.
+
+DEDUPLICATE BY STORY, not just by wording. If several headlines report the SAME \
+underlying event (same company + same event), keep only ONE — the clearest — and \
+drop the rest.
+
+For every item you KEEP, provide:
+- "category": exactly one signal category from: {cats}
+- "sector": exactly one sector from: {sectors}. Semiconductor, AI, robotics and \
+deep tech are the priority; beauty, bio, retail, finance are secondary. Pick the \
+best fit; use "other" only if none fit.
+- "en": the headline in clear English. If already English, tidy it; if Korean, \
+translate it faithfully. Keep real facts, numbers and company names exactly. Add \
+nothing not in the headline. Max ~16 words.
+- "ko": the same headline in natural Korean (translate if the source is English). \
+Max ~25 characters. Keep real facts; add nothing.
 
 Return STRICT JSON only — no prose, no markdown fences. Shape:
 {{"items":[{{"i":<original number>,"category":"<category key>",\
-"en":"<=14 word English one-line summary","ko":"<=20자 한국어 한 줄 요약"}}]}}
+"sector":"<sector key>","en":"<clean English headline>",\
+"ko":"<자연스러운 한국어 헤드라인>"}}]}}
 
 If nothing qualifies, return {{"items":[]}}.
 
@@ -193,22 +223,32 @@ def parse_json(text):
 
 
 def enrich(items, judged):
-    """Attach AI category + summaries back onto the original items."""
+    """Attach AI category, sector, priority + summaries onto original items."""
     by_cat = {c["key"]: [] for c in config.CATEGORIES}
-    valid_keys = set(by_cat.keys())
+    valid_cats = set(by_cat.keys())
+    sector_meta = {s["key"]: s for s in config.SECTORS}
+    watch = [w for w in getattr(config, "WATCHLIST", []) if w.strip()]
     for j in judged.get("items", []):
         try:
             idx = int(j["i"])
             cat = j.get("category", "other")
-            if cat not in valid_keys:
+            if cat not in valid_cats:
                 cat = "other"
             src = items[idx]
         except (KeyError, ValueError, IndexError):
             continue
+        sec_key = j.get("sector", "other")
+        sec = sector_meta.get(sec_key, sector_meta["other"])
+        blob = f'{src.get("title","")} {j.get("en","")} {j.get("ko","")}'.lower()
+        starred = any(w.lower() in blob for w in watch)
         by_cat[cat].append({
             **src,
             "en": (j.get("en") or "").strip(),
             "ko": (j.get("ko") or "").strip(),
+            "sector_key": sec["key"],
+            "sector_label": sec["label"],
+            "priority": sec["priority"],
+            "starred": starred,
         })
     return by_cat
 
@@ -226,12 +266,26 @@ def render_html(by_cat):
         rows = by_cat.get(c["key"], [])
         if not rows:
             continue
-        cards = "\n".join(render_card(r) for r in rows)
+        starred = [r for r in rows if r.get("starred")]
+        rest = [r for r in rows if not r.get("starred")]
+        primary = [r for r in rest if r.get("priority") == "primary"]
+        secondary = [r for r in rest if r.get("priority") != "primary"]
+        starred.sort(key=lambda x: x["published"], reverse=True)
+        primary.sort(key=lambda x: x["published"], reverse=True)
+        secondary.sort(key=lambda x: x["published"], reverse=True)
+
+        inner = "".join(render_card(r) for r in starred)
+        inner += "".join(render_card(r) for r in primary)
+        if secondary:
+            if starred or primary:
+                inner += '<div class="divider">other sectors</div>'
+            inner += "".join(render_card(r) for r in secondary)
+
         sections.append(f"""
         <section class="cat">
           <h2><span class="emoji">{c['emoji']}</span>{html.escape(c['label'])}
               <span class="count">{len(rows)}</span></h2>
-          <div class="cards">{cards}</div>
+          <div class="cards">{inner}</div>
         </section>""")
 
     body = "\n".join(sections) if sections else EMPTY_STATE
@@ -243,18 +297,55 @@ def render_html(by_cat):
     )
 
 
+def relative_time(iso_str):
+    """Turn an ISO timestamp into 'just now' / '3h ago' / 'yesterday' / 'Sep 7'."""
+    if not iso_str:
+        return ""
+    try:
+        then = datetime.fromisoformat(iso_str)
+    except ValueError:
+        return ""
+    if then.tzinfo is None:
+        then = then.replace(tzinfo=timezone.utc)
+    delta = datetime.now(timezone.utc) - then
+    secs = delta.total_seconds()
+    if secs < 0:
+        return "just now"
+    mins = secs / 60
+    if mins < 60:
+        return "just now" if mins < 5 else f"{int(mins)}m ago"
+    hours = mins / 60
+    if hours < 24:
+        return f"{int(hours)}h ago"
+    days = hours / 24
+    if days < 2:
+        return "yesterday"
+    if days < 7:
+        return f"{int(days)}d ago"
+    return then.strftime("%b %-d")
+
+
 def render_card(r):
     en = html.escape(r.get("en", "") or r.get("title", ""))
     ko = html.escape(r.get("ko", ""))
     title = html.escape(r.get("title", ""))
     source = html.escape(r.get("source", ""))
     link = html.escape(r.get("link", "#"))
+    sector = html.escape(r.get("sector_label", ""))
+    when = html.escape(relative_time(r.get("published", "")))
+    is_secondary = r.get("priority") != "primary"
+    cls = "card secondary" if is_secondary else "card"
+    badge_cls = "badge muted" if is_secondary else "badge"
     ko_line = f'<div class="ko">{ko}</div>' if ko else ""
+    badge = f'<span class="{badge_cls}">{sector}</span>' if sector else ""
+    when_el = f'<span class="when">{when}</span>' if when else ""
+    star = '<span class="star">★</span>' if r.get("starred") else ""
+    card_cls = cls + " starred" if r.get("starred") else cls
     return f"""
-      <a class="card" href="{link}" target="_blank" rel="noopener">
-        <div class="en">{en}</div>
+      <a class="{card_cls}" href="{link}" target="_blank" rel="noopener">
+        <div class="row">{star}{badge}<span class="en">{en}</span></div>
         {ko_line}
-        <div class="meta"><span class="src">{source}</span><span class="head">{title}</span></div>
+        <div class="meta"><span class="src">{source}</span>{when_el}<span class="head">{title}</span></div>
       </a>"""
 
 
@@ -330,6 +421,27 @@ PAGE = """<!DOCTYPE html>
   }}
   .card:hover {{ background: #fff; padding-left: 10px; }}
   .card:focus-visible {{ outline: 2px solid var(--accent); outline-offset: 2px; }}
+  .card.secondary {{ opacity: .72; }}
+  .card.secondary:hover {{ opacity: 1; }}
+  .card.starred {{ opacity: 1; border-left: 2px solid var(--accent);
+    padding-left: 10px; margin-left: -12px; }}
+  .star {{ flex: none; color: var(--accent); font-size: 13px;
+    transform: translateY(-1px); }}
+  .row {{ display: flex; align-items: baseline; gap: 9px; }}
+  .badge {{
+    flex: none; font-size: 10.5px; font-weight: 600; letter-spacing: .01em;
+    color: var(--accent); background: var(--accent-soft);
+    padding: 2px 7px; border-radius: 4px; transform: translateY(-1px);
+    white-space: nowrap;
+  }}
+  .badge.muted {{ color: var(--muted); background: transparent;
+    border: 1px solid var(--line); }}
+  .divider {{
+    font-size: 11px; color: var(--muted); letter-spacing: .06em;
+    margin: 14px 0 4px; padding-bottom: 4px;
+    display: flex; align-items: center; gap: 10px;
+  }}
+  .divider::after {{ content: ""; flex: 1; height: 1px; background: var(--line); }}
   .en {{ font-size: 16px; font-weight: 500; line-height: 1.35; }}
   .ko {{ font-family:"IBM Plex Sans KR"; font-size: 14px; color: #3f4a49; margin-top: 2px; }}
   .meta {{
@@ -337,6 +449,8 @@ PAGE = """<!DOCTYPE html>
     font-size: 12px; color: var(--muted);
   }}
   .meta .src {{ color: var(--accent); font-weight: 600; white-space: nowrap; }}
+  .meta .when {{ white-space: nowrap; }}
+  .meta .when::before {{ content: "·"; margin-right: 8px; opacity: .6; }}
   .meta .head {{
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     opacity: .8;
