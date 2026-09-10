@@ -192,7 +192,7 @@ def call_claude(prompt):
     }
     payload = {
         "model": config.CLAUDE_MODEL,
-        "max_tokens": 4000,
+        "max_tokens": 8000,
         "messages": [{"role": "user", "content": prompt}],
     }
     try:
@@ -501,17 +501,31 @@ PAGE = """<!DOCTYPE html>
 # --------------------------------------------------------------------------
 # MAIN
 # --------------------------------------------------------------------------
+def process(items):
+    """Judge items in chunks so the AI's output never truncates on heavy days,
+    then merge every chunk into one categorized result."""
+    by_cat = {c["key"]: [] for c in config.CATEGORIES}
+    if not items:
+        return by_cat
+    chunk_size = 50
+    n_chunks = (len(items) + chunk_size - 1) // chunk_size
+    for ci in range(n_chunks):
+        chunk = items[ci * chunk_size:(ci + 1) * chunk_size]
+        if n_chunks > 1:
+            print(f"  judging chunk {ci + 1}/{n_chunks} ({len(chunk)} items)")
+        judged = call_claude(build_prompt(chunk))
+        part = enrich(chunk, judged)          # indices are local to this chunk
+        for k, v in part.items():
+            by_cat[k].extend(v)
+    return by_cat
+
+
 def main():
     print("Korea CRE Radar — building today's page")
     raw = fetch_all()
     items = dedup(raw)
 
-    if items:
-        prompt = build_prompt(items)
-        judged = call_claude(prompt)
-        by_cat = enrich(items, judged)
-    else:
-        by_cat = {c["key"]: [] for c in config.CATEGORIES}
+    by_cat = process(items)
 
     kept = sum(len(v) for v in by_cat.values())
     print(f"  kept {kept} signals after AI filter")
@@ -525,3 +539,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
