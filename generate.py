@@ -130,6 +130,7 @@ def build_prompt(items):
     cats = ", ".join(f'"{c["key"]}" ({c["label"]})' for c in config.CATEGORIES)
     sectors = ", ".join(f'"{s["key"]}" ({s["label"]})' for s in config.SECTORS)
     excludes = ", ".join(config.EXCLUDE_COMPANIES)
+    foreign = ", ".join(getattr(config, "FOREIGN_BLOCKLIST", []))
     numbered = "\n".join(
         f'{i}. [{it["lang"]}] {it["title"]}' for i, it in enumerate(items)
     )
@@ -144,14 +145,28 @@ Korean company:
 - a funding round (venture funding, Series A/B/C, capital raise)
 - an IPO or stock listing (Korea KOSDAQ/KOSPI or US Nasdaq/NYSE)
 
+*** MOST IMPORTANT RULE — THE COMPANY ITSELF MUST BE KOREAN. ***
+The SUBJECT company must be founded/headquartered in South Korea. A Korean-LANGUAGE \
+article is NOT enough — Korean media constantly covers FOREIGN startups, and those \
+must be DROPPED even though the article is in Korean and mentions funding or the US. \
+Judge the nationality of the COMPANY, not the language of the article.
+- DROP a Korean-language article about a US, Chinese, Japanese, or other foreign \
+company (e.g. a US AI startup raising a round, a US robotics firm, a foreign chipmaker) \
+— even if it mentions Korea, Korean investors, or the US market.
+- Examples of the kind of FOREIGN companies to DROP: Positron AI, Vecna Robotics, \
+Lightfield, Antioch, and any other non-Korean firm. These are NOT Korean and must \
+never be kept, regardless of the article's language.
+- ALWAYS DROP these specific known-foreign companies if they are the subject: {foreign}.
+- If you are not confident the subject company is Korean, DROP it. When unsure, exclude.
+
 HARD EXCLUSION — drop any headline that is centrally about these big conglomerates \
 or their divisions/subsidiaries: {excludes}. Also drop any other top-tier Korean \
 conglomerate (chaebol) even if not named. If a small company is mentioned only as \
 a SUPPLIER to one of these, and the small company is the real subject, KEEP it — \
 the focus is the smaller company, not the chaebol.
 
-Also discard: general market commentary, non-Korean companies, opinion pieces, \
-stock-price chatter, sports, unrelated politics.
+Also discard: general market commentary, opinion pieces, stock-price chatter, \
+sports, unrelated politics.
 
 DEDUPLICATE BY STORY, not just by wording. If several headlines report the SAME \
 underlying event (same company + same event), keep only ONE — the clearest — and \
