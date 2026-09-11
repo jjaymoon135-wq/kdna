@@ -82,6 +82,20 @@ EXCLUDE_COMPANIES = [
 ]
 
 # --------------------------------------------------------------------------
+# 2a) FOREIGN BLOCKLIST -- non-Korean companies that keep slipping through
+#     because Korean media covers them. Add any foreign (US/Chinese/Japanese/
+#     etc.) company name here the moment you spot it in your feed, and it will
+#     be hard-dropped. The AI already tries to exclude foreign companies; this
+#     is your manual backstop for stubborn repeat offenders.
+# --------------------------------------------------------------------------
+FOREIGN_BLOCKLIST = [
+    "Positron AI", "Positron",
+    "Vecna Robotics", "Vecna",
+    "Lightfield",
+    "Antioch",
+]
+
+# --------------------------------------------------------------------------
 # 2b) WATCHLIST -- specific companies tracked BY NAME.
 #     Each becomes its own search AND gets starred + floated to the top of
 #     its section when it appears.
@@ -134,5 +148,5 @@ CATEGORIES = [
 # --------------------------------------------------------------------------
 LOOKBACK_HOURS = 36
 CLAUDE_MODEL = "claude-haiku-4-5-20251001"
-MAX_ITEMS_TO_JUDGE = 300
+MAX_ITEMS_TO_JUDGE = 200
 DISPLAY_TZ = "America/Los_Angeles"
