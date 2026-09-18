@@ -40,6 +40,89 @@ def google_news_url(query, lang):
     return f"{GOOGLE_NEWS}?q={q}&{params}"
 
 
+def fetch_rss_feeds():
+    """Pull items from extra Korean tech-media RSS feeds in config. Each feed is
+    independent: a broken or slow feed is skipped, never breaks the run."""
+    items = []
+    feeds = getattr(config, "NEWS_RSS_FEEDS", [])
+    if not feeds:
+        return items
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=config.LOOKBACK_HOURS)
+    for url in feeds:
+        try:
+            feed = feedparser.parse(url)
+            outlet = getattr(getattr(feed, "feed", None), "title", "") or ""
+            for entry in feed.entries:
+                published = None
+                if getattr(entry, "published_parsed", None):
+                    published = datetime(*entry.published_parsed[:6], tzinfo=timezone.utc)
+                if published and published < cutoff:
+                    continue
+                items.append({
+                    "title": clean_title(entry.get("title", "")),
+                    "link": entry.get("link", ""),
+                    "source": outlet,
+                    "published": published.isoformat() if published else "",
+                    "lang": "ko",
+                    "query": "rss",
+                })
+        except Exception as e:
+            print(f"  ! rss feed failed ({url}): {e}", file=sys.stderr)
+            continue
+        time.sleep(0.3)
+    if items:
+        print(f"  +{len(items)} from {len(feeds)} RSS feeds")
+    return items
+
+
+def fetch_naver():
+    """Optional: Naver News search. Runs only if both NAVER_CLIENT_ID and
+    NAVER_CLIENT_SECRET env vars are set; otherwise skipped silently."""
+    cid = os.environ.get("NAVER_CLIENT_ID", "")
+    csec = os.environ.get("NAVER_CLIENT_SECRET", "")
+    if not (cid and csec):
+        return []
+    import email.utils
+    headers = {"X-Naver-Client-Id": cid, "X-Naver-Client-Secret": csec}
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=config.LOOKBACK_HOURS)
+    items = []
+    for q in getattr(config, "NAVER_QUERIES", []):
+        try:
+            r = requests.get(
+                "https://openapi.naver.com/v1/search/news.json",
+                headers=headers,
+                params={"query": q, "display": 30, "sort": "date"},
+                timeout=30,
+            )
+            r.raise_for_status()
+            for it in r.json().get("items", []):
+                published = None
+                try:
+                    published = email.utils.parsedate_to_datetime(it.get("pubDate", ""))
+                    if published and published.tzinfo is None:
+                        published = published.replace(tzinfo=timezone.utc)
+                except (TypeError, ValueError):
+                    pass
+                if published and published < cutoff:
+                    continue
+                title = clean_title(re.sub(r"<[^>]+>", "", it.get("title", "")))
+                items.append({
+                    "title": title,
+                    "link": it.get("originallink") or it.get("link", ""),
+                    "source": "Naver",
+                    "published": published.isoformat() if published else "",
+                    "lang": "ko",
+                    "query": q,
+                })
+        except Exception as e:
+            print(f"  ! naver failed ('{q}'): {e}", file=sys.stderr)
+            continue
+        time.sleep(0.3)
+    if items:
+        print(f"  +{len(items)} from Naver")
+    return items
+
+
 def fetch_all():
     """Run every query, collect raw items. Returns list of dicts."""
     items = []
@@ -87,6 +170,10 @@ def fetch_all():
             })
         time.sleep(0.4)  # be polite to Google News
 
+    # Extra sources (both optional, both fail-safe)
+    items += fetch_rss_feeds()
+    items += fetch_naver()
+
     print(f"  fetched {len(items)} raw items")
     return items
 
@@ -100,27 +187,67 @@ def clean_title(t):
 
 
 # --------------------------------------------------------------------------
-# STEP 2 — DEDUP
+# STEP 2 — DEDUP  (story-level, not just identical titles)
 # --------------------------------------------------------------------------
 def normalize(t):
     return re.sub(r"[^\w가-힣]", "", (t or "").lower())
 
 
+def title_trigrams(t):
+    """Character 3-grams of the normalized title. Works for Korean and English
+    without a tokenizer, and lets us measure how similar two headlines are."""
+    n = normalize(t)
+    if len(n) < 3:
+        return {n} if n else set()
+    return {n[i:i + 3] for i in range(len(n) - 2)}
+
+
+def similar(a, b, thresh):
+    """True if two trigram sets overlap enough to be the same story."""
+    if not a or not b:
+        return False
+    inter = len(a & b)
+    if inter == 0:
+        return False
+    return inter / len(a | b) >= thresh
+
+
 def dedup(items):
-    """Drop near-duplicate headlines (same story from many outlets)."""
-    seen = set()
-    out = []
+    """Collapse the same story told by many outlets. Keeps the newest copy of
+    each distinct story, so broadening sources doesn't flood the page with
+    near-identical headlines."""
+    items = [it for it in items if normalize(it.get("title", ""))]
+    # newest first so the copy we keep is the freshest
+    items.sort(key=lambda x: x.get("published", ""), reverse=True)
+
+    thresh = getattr(config, "DEDUP_SIMILARITY", 0.6)
+    kept, kept_grams = [], []
     for it in items:
-        key = normalize(it["title"])[:60]
-        if not key or key in seen:
+        g = title_trigrams(it["title"])
+        if any(similar(g, kg, thresh) for kg in kept_grams):
             continue
-        seen.add(key)
-        out.append(it)
-    # newest first, cap the batch size sent to the AI
-    out.sort(key=lambda x: x["published"], reverse=True)
-    capped = out[: config.MAX_ITEMS_TO_JUDGE]
+        kept.append(it)
+        kept_grams.append(g)
+
+    capped = kept[: config.MAX_ITEMS_TO_JUDGE]
     print(f"  {len(capped)} items after dedup (from {len(items)})")
     return capped
+
+
+def dedup_signals(signals):
+    """Second, lighter story-dedup on the AI's KEPT signals — catches any
+    near-duplicate that survived across separate AI chunks. Runs on the AI's
+    clean summaries, which are near-identical for the same event, so it uses a
+    higher threshold than raw-title dedup."""
+    thresh = getattr(config, "DEDUP_SIGNAL_SIMILARITY", 0.5)
+    out, grams = [], []
+    for s in sorted(signals, key=lambda x: x.get("published", ""), reverse=True):
+        g = title_trigrams(s.get("en", "") or s.get("title", ""))
+        if any(similar(g, kg, thresh) for kg in grams):
+            continue
+        out.append(s)
+        grams.append(g)
+    return out
 
 
 # --------------------------------------------------------------------------
@@ -668,7 +795,8 @@ def main():
 
     by_cat = process(items)
     todays = flatten(by_cat)
-    print(f"  kept {len(todays)} signals after AI filter")
+    todays = dedup_signals(todays)
+    print(f"  kept {len(todays)} signals after AI filter + story-dedup")
 
     archive = load_archive()
     added = merge_into_archive(archive, todays, datetime.now(timezone.utc).isoformat())
