@@ -148,5 +148,40 @@ CATEGORIES = [
 # --------------------------------------------------------------------------
 LOOKBACK_HOURS = 36
 CLAUDE_MODEL = "claude-haiku-4-5-20251001"
-MAX_ITEMS_TO_JUDGE = 200
+MAX_ITEMS_TO_JUDGE = 400
 DISPLAY_TZ = "America/Los_Angeles"
+
+# Story-dedup sensitivity (0-1). Higher = stricter (fewer things treated as
+# duplicates). 0.25 collapses the same story reworded across outlets while
+# keeping different events about the same company separate. Lower it toward
+# 0.20 if you still see dupes; raise it toward 0.30 if distinct stories merge.
+DEDUP_SIMILARITY = 0.30
+# Dedup threshold for the AI's clean summaries (they're near-identical for the
+# same event, so this is higher). Backstop for dupes crossing AI batches.
+DEDUP_SIGNAL_SIMILARITY = 0.5
+
+# --------------------------------------------------------------------------
+# 6) BROADER INTAKE (optional extra sources — all fail safe if unavailable)
+# --------------------------------------------------------------------------
+# (a) Extra Korean tech/startup media RSS feeds, queried directly in addition
+#     to Google News. Add any feed URL you like; a dead/broken feed is simply
+#     skipped, never crashes the run. Leave empty to use Google News only.
+NEWS_RSS_FEEDS = [
+    "https://platum.kr/feed",
+    "https://www.venturesquare.net/feed",
+    "https://byline.network/feed/",
+    "https://wowtale.net/feed/",
+]
+
+# (b) Naver News search (Korea's biggest aggregator — catches domestic outlets
+#     Google misses). OFF unless you add two GitHub secrets: NAVER_CLIENT_ID
+#     and NAVER_CLIENT_SECRET (free from developers.naver.com). If the secrets
+#     aren't set, this is skipped automatically. These queries are used for it.
+NAVER_QUERIES = [
+    "스타트업 미국 진출",
+    "반도체 스타트업 투자",
+    "AI 스타트업 시리즈",
+    "로봇 스타트업 투자",
+    "코스닥 상장 기술",
+    "나스닥 상장 스타트업",
+]
