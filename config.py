@@ -114,7 +114,11 @@ WATCHLIST = [
     "Mobiltech US", "Zenix Robotics", "Lablup", "FriendliAI", "Phyxup",
     "CLIKA", "Sendbird", "QueryPie", "Deft Robotics", "SUPERB AI",
     "Contoro Robotics", "Magnachip Semiconductor", "Upstage AI", "Alteogen",
-    "Intellian Technology", "Robotis", "Wrtn", "뤼튼",
+    "Intellian Technology", "Robotis", "Wrtn", "뤼튼", "Park Systems", "파크시스템스",
+    "서울반도체", "Seoul Semiconductor", "Primemas", 
+    "Neosem Technology", "네오셈", "ITM Semiconductor", "AUROS Technology",
+    "BCnC", "DB Hitek", "Eo Technics", "Gaonchips", "HPSP", "Intekplus",
+    "Pemtron", "Techwing", "Telechips", "UNITEST",
 ]
 
 # --------------------------------------------------------------------------
