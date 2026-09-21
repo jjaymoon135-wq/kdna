@@ -3790,5 +3790,53 @@
   "starred": false,
   "category": "us_expansion",
   "first_seen": "2026-09-21T16:57:20.496482+00:00"
+ },
+ {
+  "title": "에이직랜드, TSMC 북미 포럼서 AI ASIC 역량 공개…파두 칩도 전시",
+  "link": "https://news.google.com/rss/articles/CBMiVEFVX3lxTE91SzUtaEpuRmx2d2FMRlBxdlgxcjRzM3RoUTUxRm94WWdKbTVacXg0MGlrLU1EcWMyQ21tNjhsSHZwd2ltLVN4S3h0azhmYVh3NXJ5bA?oc=5",
+  "source": "v.daum.net",
+  "published": "2026-09-21T09:19:09+00:00",
+  "lang": "ko",
+  "query": "파두",
+  "en": "AEJiland showcases AI ASIC capabilities at TSMC North America forum",
+  "ko": "에이직랜드, TSMC 북미 포럼서 AI ASIC 역량 공개",
+  "sector_key": "semiconductor",
+  "sector_label": "Semiconductor",
+  "priority": "primary",
+  "starred": true,
+  "category": "other",
+  "first_seen": "2026-09-21T18:23:47.852445+00:00"
+ },
+ {
+  "title": "인천TP, 실리콘밸리서 ‘인천 라이즈업’ 개최…AI 기업 미국 시장 검증",
+  "link": "https://news.google.com/rss/articles/CBMiW0FVX3lxTE9tYWllX0w0VFVHU1lJUzhIaExYQTdReE83Z0VQTWhoLW1naUNzdGFQcXdEc195UDVCTW1GbHdiS01KLTZJZ1ZKbVVPUzFHb2FpOXV2aUU5MDl4T00?oc=5",
+  "source": "경기일보",
+  "published": "2026-09-21T06:13:59+00:00",
+  "lang": "ko",
+  "query": "인공지능 기업 미국 진출",
+  "en": "Incheon TP hosts AI firms for US market validation in Silicon Valley",
+  "ko": "인천TP, 실리콘밸리서 '인천 라이즈업' 개최…AI 기업 미국 시장 검증",
+  "sector_key": "ai",
+  "sector_label": "AI",
+  "priority": "primary",
+  "starred": false,
+  "category": "us_expansion",
+  "first_seen": "2026-09-21T18:23:47.852445+00:00"
+ },
+ {
+  "title": "모스트, 코스트코 넘어 ‘타깃’…K뷰티 미국 유통망 넓힌다",
+  "link": "https://news.google.com/rss/articles/CBMia0FVX3lxTE1nMGs4b1ptQmx3SGFkUC1JZVlvcXVrOHkxUGNJNzFYN0xOZldlU0NHYXpUZ3RDRC1NMFlfYVljLV8yWXVaR084TkRrcjlPQW5DY3pOMHE4TXRoMkhza29tV2xpZlA5MEtGRjNj?oc=5",
+  "source": "주간신문씨엠엔",
+  "published": "2026-09-21T01:43:04+00:00",
+  "lang": "ko",
+  "query": "K뷰티 미국 진출",
+  "en": "Most expands K-beauty US distribution beyond Costco to Target",
+  "ko": "모스트, 코스트코 넘어 타깃으로 K뷰티 미국 유통망 확대",
+  "sector_key": "beauty",
+  "sector_label": "Beauty",
+  "priority": "secondary",
+  "starred": false,
+  "category": "us_expansion",
+  "first_seen": "2026-09-21T18:23:47.852445+00:00"
  }
 ]
