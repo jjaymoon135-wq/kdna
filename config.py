@@ -118,7 +118,7 @@ WATCHLIST = [
     "서울반도체", "Seoul Semiconductor", "Primemas", 
     "Neosem Technology", "네오셈", "ITM Semiconductor", "AUROS Technology",
     "BCnC", "DB Hitek", "Eo Technics", "Gaonchips", "HPSP", "Intekplus",
-    "Pemtron", "Techwing", "Telechips", "UNITEST",
+    "Pemtron", "Techwing", "Telechips", "UNITEST", "Chips & Media",
 ]
 
 # --------------------------------------------------------------------------
