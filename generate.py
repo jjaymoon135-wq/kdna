@@ -445,7 +445,88 @@ def month_bucket(item):
         return None
 
 
-def render_html(archive):
+US_TAG_META = {
+    "us":      ("🇺🇸", "US-confirmed", "us"),
+    "unclear": ("❓", "Unclear", "unclear"),
+    "nonus":   ("🌏", "Non-US", "nonus"),
+}
+
+
+def render_dart_card(f):
+    tag_emoji, tag_label, tag_cls = US_TAG_META.get(f.get("us_tag", "unclear"),
+                                                    US_TAG_META["unclear"])
+    corp = html.escape(f.get("corp_name", ""))
+    title = html.escape(f.get("report_nm", ""))
+    cat = html.escape(f.get("category", ""))
+    link = html.escape(f.get("link", "#"))
+    dt = html.escape(f.get("rcept_dt", ""))
+    sigs = ", ".join(html.escape(s) for s in f.get("us_signals", [])[:6])
+    sig_line = f'<div class="dart-sig">signals: {sigs}</div>' if sigs else ""
+    dimmed = " dart-dim" if f.get("us_tag") == "nonus" else ""
+    return f"""
+      <a class="card dart{dimmed}" href="{link}" target="_blank" rel="noopener">
+        <div class="row">
+          <span class="ustag {tag_cls}">{tag_emoji} {tag_label}</span>
+          <span class="badge muted">{cat}</span>
+          <span class="en">{corp}</span>
+        </div>
+        <div class="dart-title">{title}</div>
+        {sig_line}
+        <div class="meta"><span class="src">DART</span><span class="when">{dt}</span></div>
+      </a>"""
+
+
+def render_dart_section(dart_data):
+    if dart_data is None:
+        return ('<section class="cat"><h2><span class="emoji">📄</span>DART Filings</h2>'
+                '<div class="dart-unavail">DART unavailable — news sections unaffected.</div>'
+                '</section>')
+    filings = dart_data.get("filings", [])
+    if not filings:
+        return ('<section class="cat"><h2><span class="emoji">📄</span>DART Filings</h2>'
+                '<div class="dart-unavail">No qualifying filings in the last 3 days.</div>'
+                '</section>')
+    # US-confirmed first, then unclear, then non-US (dimmed) last
+    order = {"us": 0, "unclear": 1, "nonus": 2}
+    filings = sorted(filings, key=lambda x: (order.get(x.get("us_tag"), 1),
+                                             x.get("rcept_no", "")), reverse=False)
+    filings = sorted(filings, key=lambda x: order.get(x.get("us_tag"), 1))
+    cards = "".join(render_dart_card(f) for f in filings)
+    return f"""
+        <section class="cat">
+          <h2><span class="emoji">📄</span>DART Filings
+              <span class="count">{len(filings)}</span></h2>
+          <div class="cards">{cards}</div>
+        </section>"""
+
+
+def render_top_signals(tops):
+    if not tops:
+        return ""
+    rows = []
+    for t in tops:
+        f = t["filing"]
+        corp = html.escape(f.get("corp_name", ""))
+        cat = html.escape(f.get("category", ""))
+        link = html.escape(f.get("link", "#"))
+        tag_emoji, tag_label, tag_cls = US_TAG_META.get(f.get("us_tag", "unclear"),
+                                                        US_TAG_META["unclear"])
+        rows.append(f"""
+      <a class="card fire" href="{link}" target="_blank" rel="noopener">
+        <div class="row"><span class="star">🔥</span>
+          <span class="ustag {tag_cls}">{tag_emoji} {tag_label}</span>
+          <span class="en">{corp}</span></div>
+        <div class="dart-title">Double signal · news + DART filing ({cat})</div>
+      </a>""")
+    return f"""
+        <section class="cat top-signals">
+          <h2><span class="emoji">🔥</span>Top Signals
+              <span class="count">{len(rows)}</span></h2>
+          <div class="cards">{"".join(rows)}</div>
+        </section>"""
+
+
+def render_html(archive, dart_data=None, top_signals=None):
     now = datetime.now(timezone.utc)
     date_str = now.strftime("%A, %B %-d, %Y")
 
@@ -461,9 +542,13 @@ def render_html(archive):
             months.setdefault(mk, []).append(a)
     month_order = sorted(months.keys(), reverse=True)
 
+    # Latest panel = [Top Signals] + news sections + [DART filings]
+    latest_html = render_top_signals(top_signals) + render_sections(latest) \
+        + render_dart_section(dart_data)
+
     # Build tab buttons + panels
     tabs = ['<button class="tab active" data-panel="latest">Latest</button>']
-    panels = [f'<div class="panel active" id="panel-latest">{render_sections(latest)}</div>']
+    panels = [f'<div class="panel active" id="panel-latest">{latest_html}</div>']
     for mk in month_order:
         label = datetime.strptime(mk, "%Y-%m").strftime("%b %Y")
         pid = "m" + mk.replace("-", "")
@@ -611,6 +696,21 @@ PAGE = """<!DOCTYPE html>
     padding-left: 10px; margin-left: -12px; }}
   .star {{ flex: none; color: var(--accent); font-size: 13px;
     transform: translateY(-1px); }}
+  .ustag {{ flex: none; font-size: 10.5px; font-weight: 600; padding: 1px 7px;
+    border-radius: 4px; white-space: nowrap; transform: translateY(-1px); }}
+  .ustag.us {{ color: #1f5f5b; background: #e3f2ef; }}
+  .ustag.unclear {{ color: var(--muted); background: transparent; border: 1px solid var(--line); }}
+  .ustag.nonus {{ color: var(--muted); background: transparent; border: 1px dashed var(--line); }}
+  .card.dart .dart-title {{ font-size: 13.5px; color: var(--ink); margin-top: 3px; }}
+  .card.dart-dim {{ opacity: .5; }}
+  .card.dart-dim:hover {{ opacity: 1; }}
+  .dart-sig {{ font-size: 11px; color: var(--muted); margin-top: 3px; }}
+  .dart-unavail {{ font-size: 13px; color: var(--muted); padding: 10px 4px; }}
+  .card.fire {{ border-left: 2px solid var(--flag); padding-left: 10px; margin-left: -12px; }}
+  .top-signals h2 {{ color: var(--flag); }}
+  @media (prefers-color-scheme: dark) {{
+    .ustag.us {{ color: #7fd6cd; background: #14302d; }}
+  }}
   .row {{ display: flex; align-items: baseline; gap: 9px; }}
   .badge {{
     flex: none; font-size: 10.5px; font-weight: 600; letter-spacing: .01em;
@@ -668,6 +768,8 @@ PAGE = """<!DOCTYPE html>
     font-size: 12px; color: var(--muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; }}
   a.tune {{ color: var(--accent); text-decoration: none; }}
   a.tune:hover {{ text-decoration: underline; }}
+  .footnote {{ max-width: 760px; margin: 10px auto 0; font-size: 11px;
+    color: var(--muted); text-align: center; opacity: .8; }}
 
   @media (max-width: 480px) {{
     h1 {{ font-size: 25px; }}
@@ -700,6 +802,7 @@ PAGE = """<!DOCTYPE html>
       <span>Generated {generated} · {total} archived · Google News + Claude</span>
       <span>Tune what it catches in <span class="tune">config.py</span></span>
     </footer>
+    <div class="footnote">📄 DART 주요사항보고 covers <b>listed companies only</b> — unlisted suppliers are not captured here.</div>
   </div>
   <script>
     document.querySelectorAll('.tab').forEach(function (t) {{
@@ -803,7 +906,23 @@ def main():
     print(f"  archive: +{added} new, {len(archive)} total")
     save_archive(archive)
 
-    out_html = render_html(archive)
+    # --- DART verification layer (fully isolated; never breaks the news page) ---
+    dart_data, top_signals = None, None
+    try:
+        import dart
+        dart_data = dart.build_dart_layer("docs/dart_cache.json", days=3)
+        print(f"  dart: {dart_data['count']} filings, {dart_data['fetched_bodies']} bodies fetched")
+        # cross-signal: DART company also in recent news within 14 days
+        recent_news = [a for a in archive]
+        flagged, top_signals = dart.find_double_signals(
+            dart_data["filings"], recent_news, days=14)
+        if flagged:
+            print(f"  dart: {len(flagged)} double-signal companies")
+    except Exception as e:
+        print(f"  ! DART layer unavailable: {type(e).__name__}: {e}", file=sys.stderr)
+        dart_data, top_signals = None, None   # news page still builds
+
+    out_html = render_html(archive, dart_data=dart_data, top_signals=top_signals)
     os.makedirs("docs", exist_ok=True)
     with open("docs/index.html", "w", encoding="utf-8") as f:
         f.write(out_html)
