@@ -2,19 +2,28 @@ name: Korea CRE Radar
 
 on:
   schedule:
-    # Times are UTC. 13:00 UTC = 6:00 AM Pacific Daylight (summer),
-    # 5:00 AM Pacific Standard (winter). Lands before you're at your desk.
-    # Change this one number to shift the delivery time.
-    - cron: "0 13 * * 1-5"   # Mon–Fri
-  workflow_dispatch:          # lets you run it manually from the Actions tab
+    # Times are UTC. 14:17 UTC = 11:17 PM in Korea (all year; Korea has no
+    # daylight saving) = 6:17 AM Pacific Standard / 7:17 AM Pacific Daylight.
+    # The odd minute (:17) is on purpose: GitHub delays runs scheduled on the
+    # hour. GitHub's own timer has been starting runs hours late, so for an
+    # on-time start trigger this workflow from an outside timer too (the
+    # workflow_dispatch below). This schedule then acts as a free backup.
+    - cron: "17 14 * * 1-5"   # Mon–Fri
+  workflow_dispatch:          # lets you run it manually / from an outside timer
 
 # Allow the workflow to commit the refreshed page back to the repo
 permissions:
   contents: write
 
+# Never run two at once (a manual click during a scheduled run just waits)
+concurrency:
+  group: radar-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Check out repo
         uses: actions/checkout@v4
@@ -30,6 +39,9 @@ jobs:
       - name: Generate today's page
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
         run: python generate.py
 
       - name: Commit updated page
@@ -38,4 +50,5 @@ jobs:
           git config user.email "actions@github.com"
           git add docs/
           git commit -m "Radar update $(date -u +'%Y-%m-%d')" || echo "No changes"
+          git pull --rebase origin "${GITHUB_REF_NAME}" || true
           git push

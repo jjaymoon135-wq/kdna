@@ -118,7 +118,7 @@ WATCHLIST = [
     "서울반도체", "Seoul Semiconductor", "Primemas", 
     "Neosem Technology", "네오셈", "ITM Semiconductor", "AUROS Technology",
     "BCnC", "DB Hitek", "Eo Technics", "Gaonchips", "HPSP", "Intekplus",
-    "Pemtron", "Techwing", "Telechips", "UNITEST", "Chips & Media",
+    "Pemtron", "Techwing", "Telechips", "UNITEST",
 ]
 
 # --------------------------------------------------------------------------
@@ -150,8 +150,12 @@ CATEGORIES = [
 # --------------------------------------------------------------------------
 # 5) TUNING KNOBS
 # --------------------------------------------------------------------------
-LOOKBACK_HOURS = 36
-CLAUDE_MODEL = "claude-haiku-4-5-20251001"
+# 72h so Monday's run covers the weekend in Korea. Safe to be long: headlines
+# already judged are remembered (docs/judged.json) and never paid for twice.
+LOOKBACK_HOURS = 72
+# Model that judges headlines. Haiku 5.5 is cheapest. If foreign companies keep
+# slipping through, try "claude-sonnet-5-5" (about 20x the price, still cents/day).
+CLAUDE_MODEL = "claude-haiku-5-5"
 MAX_ITEMS_TO_JUDGE = 400
 DISPLAY_TZ = "America/Los_Angeles"
 
