@@ -93,6 +93,8 @@ FOREIGN_BLOCKLIST = [
     "Vecna Robotics", "Vecna",
     "Lightfield",
     "Antioch",
+    "Path Robotics",      # Ohio welding-AI firm; Naver Ventures invested
+    "Nauticus", "Nauticus Robotics",   # Houston subsea robotics, Nasdaq-listed
 ]
 
 # --------------------------------------------------------------------------
