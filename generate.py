@@ -15,11 +15,18 @@ import html
 import time
 import urllib.parse
 from datetime import datetime, timezone, timedelta
+from zoneinfo import ZoneInfo
 
 import feedparser
 import requests
 
 import config
+
+# Display timezone (page timestamps + what counts as "today" on the Latest tab)
+try:
+    DISPLAY_TZ = ZoneInfo(getattr(config, "DISPLAY_TZ", "America/Los_Angeles"))
+except Exception:                      # tz database missing -> fall back to UTC
+    DISPLAY_TZ = timezone.utc
 
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
@@ -137,6 +144,9 @@ def fetch_all():
         lang = "ko" if re.search(r"[가-힣]", name) else "en"
         jobs.append((f'{name} 미국' if lang == "ko" else f"{name} US", lang))
         jobs.append((name, lang))
+
+    # Drop repeated searches (same query + language) so we never fetch twice
+    jobs = list(dict.fromkeys(jobs))
 
     cutoff = datetime.now(timezone.utc) - timedelta(hours=config.LOOKBACK_HOURS)
 
@@ -322,10 +332,21 @@ HEADLINES:
 """
 
 
+CLAUDE_ATTEMPTS = 4          # total tries per chunk
+RETRY_STATUS = {408, 429, 500, 502, 503, 504, 529}
+
+
 def call_claude(prompt):
+    """Ask Claude to judge one chunk of headlines.
+
+    Returns the parsed {"items": [...]} dict on success, or None if the call
+    ultimately failed. None (not an empty result) matters: the caller must NOT
+    mark a failed chunk as 'already judged', or those headlines would vanish.
+    Busy/overloaded errors are retried with a growing wait.
+    """
     if not ANTHROPIC_API_KEY:
         print("  ! no ANTHROPIC_API_KEY set — skipping AI step", file=sys.stderr)
-        return {"items": []}
+        return None
 
     headers = {
         "x-api-key": ANTHROPIC_API_KEY,
@@ -337,19 +358,43 @@ def call_claude(prompt):
         "max_tokens": 8000,
         "messages": [{"role": "user", "content": prompt}],
     }
-    try:
-        r = requests.post(ANTHROPIC_URL, headers=headers, json=payload, timeout=120)
-        r.raise_for_status()
-        data = r.json()
-        text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
-        return parse_json(text)
-    except Exception as e:
-        print(f"  ! Claude call failed: {e}", file=sys.stderr)
-        return {"items": []}
+    for attempt in range(1, CLAUDE_ATTEMPTS + 1):
+        wait = 5 * attempt * attempt            # 5s, 20s, 45s ...
+        try:
+            r = requests.post(ANTHROPIC_URL, headers=headers, json=payload, timeout=120)
+            if r.status_code in RETRY_STATUS and attempt < CLAUDE_ATTEMPTS:
+                print(f"  ! Claude busy (HTTP {r.status_code}), retry {attempt}/"
+                      f"{CLAUDE_ATTEMPTS - 1} in {wait}s", file=sys.stderr)
+                time.sleep(wait)
+                continue
+            if r.status_code >= 400:
+                # show Anthropic's own explanation (bad model name, no credit...)
+                print(f"  ! Claude HTTP {r.status_code}: {r.text[:300]}", file=sys.stderr)
+            r.raise_for_status()
+            data = r.json()
+            text = "".join(b.get("text", "") for b in data.get("content", [])
+                           if b.get("type") == "text")
+            usage = data.get("usage", {})
+            if usage:
+                print(f"    tokens: {usage.get('input_tokens', '?')} in / "
+                      f"{usage.get('output_tokens', '?')} out")
+            return parse_json(text)             # None if the reply was unusable
+        except (requests.Timeout, requests.ConnectionError) as e:
+            if attempt < CLAUDE_ATTEMPTS:
+                print(f"  ! Claude network error ({type(e).__name__}), retry "
+                      f"{attempt}/{CLAUDE_ATTEMPTS - 1} in {wait}s", file=sys.stderr)
+                time.sleep(wait)
+                continue
+            print(f"  ! Claude call failed: {e}", file=sys.stderr)
+            return None
+        except Exception as e:
+            print(f"  ! Claude call failed: {e}", file=sys.stderr)
+            return None
+    return None
 
 
 def parse_json(text):
-    """Strip any stray fences and parse. Defensive against model quirks."""
+    """Strip any stray fences and parse. Returns None if unusable."""
     text = text.strip()
     text = re.sub(r"^```(?:json)?", "", text).strip()
     text = re.sub(r"```$", "", text).strip()
@@ -358,10 +403,29 @@ def parse_json(text):
     if m:
         text = m.group(0)
     try:
-        return json.loads(text)
+        data = json.loads(text)
     except Exception as e:
         print(f"  ! could not parse AI JSON: {e}", file=sys.stderr)
-        return {"items": []}
+        return None
+    if not isinstance(data, dict) or not isinstance(data.get("items"), list):
+        print("  ! AI JSON missing an 'items' list", file=sys.stderr)
+        return None
+    return data
+
+
+def _squash(s):
+    """Lowercase and drop spaces/punctuation so '베어 로보틱스' matches '베어로보틱스'
+    and 'Chips & Media' matches 'chips and media' style variations."""
+    return re.sub(r"[\s·\-\.,&]", "", (s or "").lower())
+
+
+def watch_terms():
+    """Everything that should earn a ★: the watchlist names plus the Korean/other
+    spellings in config.WATCHLIST_ALIASES (used for matching only, not searching)."""
+    names = [w for w in getattr(config, "WATCHLIST", []) if w.strip()]
+    for alts in getattr(config, "WATCHLIST_ALIASES", {}).values():
+        names += [a for a in alts if a.strip()]
+    return sorted({_squash(n) for n in names if _squash(n)})
 
 
 def enrich(items, judged):
@@ -369,7 +433,7 @@ def enrich(items, judged):
     by_cat = {c["key"]: [] for c in config.CATEGORIES}
     valid_cats = set(by_cat.keys())
     sector_meta = {s["key"]: s for s in config.SECTORS}
-    watch = [w for w in getattr(config, "WATCHLIST", []) if w.strip()]
+    watch = watch_terms()
     for j in judged.get("items", []):
         try:
             idx = int(j["i"])
@@ -381,8 +445,8 @@ def enrich(items, judged):
             continue
         sec_key = j.get("sector", "other")
         sec = sector_meta.get(sec_key, sector_meta["other"])
-        blob = f'{src.get("title","")} {j.get("en","")} {j.get("ko","")}'.lower()
-        starred = any(w.lower() in blob for w in watch)
+        blob = _squash(f'{src.get("title","")} {j.get("en","")} {j.get("ko","")}')
+        starred = any(w in blob for w in watch)
         by_cat[cat].append({
             **src,
             "en": (j.get("en") or "").strip(),
@@ -528,11 +592,20 @@ def render_top_signals(tops):
 
 def render_html(archive, dart_data=None, top_signals=None):
     now = datetime.now(timezone.utc)
-    date_str = now.strftime("%A, %B %-d, %Y")
+    now_local = now.astimezone(DISPLAY_TZ)
+    date_str = now_local.strftime("%A, %B %-d, %Y")
 
-    # --- Latest tab: everything first seen on the most recent run date ---
-    latest_date = max((a.get("first_seen", "") for a in archive), default="")[:10]
-    latest = [a for a in archive if a.get("first_seen", "")[:10] == latest_date]
+    def local_day(a):
+        """Calendar day (in the display timezone) an item was first seen."""
+        try:
+            return datetime.fromisoformat(a.get("first_seen", "")).astimezone(DISPLAY_TZ) \
+                .strftime("%Y-%m-%d")
+        except (ValueError, TypeError):
+            return ""
+
+    # --- Latest tab: everything first seen on the most recent run day ---
+    latest_date = max((local_day(a) for a in archive), default="")
+    latest = [a for a in archive if local_day(a) == latest_date]
 
     # --- Month tabs ---
     months = {}
@@ -560,7 +633,7 @@ def render_html(archive, dart_data=None, top_signals=None):
         date=html.escape(date_str),
         latest_count=len(latest),
         total=len(archive),
-        generated=now.strftime("%H:%M UTC"),
+        generated=now_local.strftime("%-I:%M %p %Z"),
         tabs="\n".join(tabs),
         panels="\n".join(panels),
     )
@@ -823,22 +896,35 @@ PAGE = """<!DOCTYPE html>
 # --------------------------------------------------------------------------
 # MAIN
 # --------------------------------------------------------------------------
-def process(items):
+def process(items, seen):
     """Judge items in chunks so the AI's output never truncates on heavy days,
-    then merge every chunk into one categorized result."""
+    then merge every chunk into one categorized result.
+
+    `seen` is the 'already looked at' memory (dict of key -> date). A chunk's
+    headlines are added to it ONLY if the AI actually answered, so a failed
+    call leaves them unseen and they are retried on the next run."""
     by_cat = {c["key"]: [] for c in config.CATEGORIES}
     if not items:
         return by_cat
     chunk_size = 50
     n_chunks = (len(items) + chunk_size - 1) // chunk_size
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    failed = 0
     for ci in range(n_chunks):
         chunk = items[ci * chunk_size:(ci + 1) * chunk_size]
-        if n_chunks > 1:
-            print(f"  judging chunk {ci + 1}/{n_chunks} ({len(chunk)} items)")
-        judged = call_claude(build_prompt(chunk))
-        part = enrich(chunk, judged)          # indices are local to this chunk
+        print(f"  judging chunk {ci + 1}/{n_chunks} ({len(chunk)} items)")
+        result = call_claude(build_prompt(chunk))
+        if result is None:                    # AI failed: do NOT mark as seen
+            failed += 1
+            continue
+        for it in chunk:
+            seen[signal_key(it)] = today
+        part = enrich(chunk, result)          # indices are local to this chunk
         for k, v in part.items():
             by_cat[k].extend(v)
+    if failed:
+        print(f"  ! {failed}/{n_chunks} chunks failed; they will be retried next run",
+              file=sys.stderr)
     return by_cat
 
 
@@ -868,6 +954,30 @@ def save_archive(archive):
         json.dump(archive, f, ensure_ascii=False, indent=1)
 
 
+# 'Already looked at' memory: every headline the AI has judged (kept OR dropped),
+# so later runs don't pay to judge it again. Entries expire after SEEN_KEEP_DAYS.
+SEEN_PATH = "docs/judged.json"
+SEEN_KEEP_DAYS = 14
+
+
+def load_seen():
+    try:
+        with open(SEEN_PATH, encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+
+def save_seen(seen):
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=SEEN_KEEP_DAYS)).strftime("%Y-%m-%d")
+    seen = {k: v for k, v in seen.items() if v >= cutoff}
+    os.makedirs("docs", exist_ok=True)
+    with open(SEEN_PATH, "w", encoding="utf-8") as f:
+        json.dump(seen, f, ensure_ascii=False)
+    return len(seen)
+
+
 def flatten(by_cat):
     """Turn the category dict into a flat list, category stamped on each item."""
     out = []
@@ -893,18 +1003,26 @@ def merge_into_archive(archive, todays, now_iso):
 
 def main():
     print("Korea CRE Radar — building today's page")
-    raw = fetch_all()
-    items = dedup(raw)
+    archive = load_archive()
+    seen = load_seen()
+    # Anything already saved to the archive also counts as seen, so the first
+    # run after this upgrade doesn't re-pay for headlines we already kept.
+    known = set(seen) | {signal_key(a) for a in archive}
 
-    by_cat = process(items)
+    raw = fetch_all()
+    fresh = [it for it in raw if signal_key(it) not in known]
+    print(f"  {len(fresh)} of {len(raw)} raw items are new since last run")
+    items = dedup(fresh)
+
+    by_cat = process(items, seen)
     todays = flatten(by_cat)
     todays = dedup_signals(todays)
     print(f"  kept {len(todays)} signals after AI filter + story-dedup")
 
-    archive = load_archive()
     added = merge_into_archive(archive, todays, datetime.now(timezone.utc).isoformat())
     print(f"  archive: +{added} new, {len(archive)} total")
     save_archive(archive)
+    print(f"  seen-list: {save_seen(seen)} headlines remembered")
 
     # --- DART verification layer (fully isolated; never breaks the news page) ---
     dart_data, top_signals = None, None

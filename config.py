@@ -93,6 +93,8 @@ FOREIGN_BLOCKLIST = [
     "Vecna Robotics", "Vecna",
     "Lightfield",
     "Antioch",
+    "Path Robotics",      # Ohio welding-AI firm; Naver Ventures invested
+    "Nauticus", "Nauticus Robotics",   # Houston subsea robotics, Nasdaq-listed
 ]
 
 # --------------------------------------------------------------------------
@@ -118,8 +120,65 @@ WATCHLIST = [
     "서울반도체", "Seoul Semiconductor", "Primemas", 
     "Neosem Technology", "네오셈", "ITM Semiconductor", "AUROS Technology",
     "BCnC", "DB Hitek", "Eo Technics", "Gaonchips", "HPSP", "Intekplus",
-    "Pemtron", "Techwing", "Telechips", "UNITEST", "Chips & Media",
+    "Pemtron", "Techwing", "Telechips", "UNITEST",
 ]
+
+# --------------------------------------------------------------------------
+# 2c) WATCHLIST ALIASES -- other spellings (mostly Korean) that should earn a
+#     ★ for the company. Used ONLY to recognise a company in a headline; they do
+#     not trigger extra searches, so they cost nothing. Spaces are ignored, so
+#     "베어 로보틱스" and "베어로보틱스" are the same. These Korean spellings were
+#     added from memory: a wrong one only means a missed ★, never a wrong result.
+#     Add the Korean name here whenever a watchlist company shows up unstarred.
+# --------------------------------------------------------------------------
+WATCHLIST_ALIASES = {
+    "DeepX": ["딥엑스"],
+    "Rainbow Robotics": ["레인보우로보틱스"],
+    "HyperAccel": ["하이퍼엑셀"],
+    "Panmnesia": ["파네시아"],
+    "SEMIFIVE": ["세미파이브"],
+    "VESSL AI": ["베슬에이아이", "베슬AI"],
+    "Lablup": ["래블업"],
+    "FriendliAI": ["프렌들리AI", "프렌들리에이아이"],
+    "Upstage AI": ["업스테이지"],
+    "MakinaRocks": ["마키나락스"],
+    "STRADVISION": ["스트라드비젼", "스트라드비전"],
+    "Mangoboost": ["망고부스트"],
+    "Openedges": ["오픈엣지"],
+    "Alphachips": ["알파칩스"],
+    "Telechips": ["텔레칩스"],
+    "Gaonchips": ["가온칩스"],
+    "Chips & Media": ["칩스앤미디어"],
+    "HPSP": ["에이치피에스피"],
+    "Eo Technics": ["이오테크닉스"],
+    "Techwing": ["테크윙"],
+    "UNITEST": ["유니테스트"],
+    "Pemtron": ["펨트론"],
+    "Intekplus": ["인텍플러스"],
+    "Intellian Technology": ["인텔리안테크"],
+    "Robotis": ["로보티스"],
+    "Sendbird": ["센드버드"],
+    "QueryPie": ["쿼리파이"],
+    "SUPERB AI": ["슈퍼브에이아이", "슈퍼브AI"],
+    "Marqvision": ["마크비전"],
+    "XL8": ["엑스엘에이트"],
+    "DeepBrain": ["딥브레인"],
+    "WIRobotics": ["위로보틱스"],
+    "Bitsensing": ["비트센싱"],
+    "Primemas": ["프라임마스"],
+    "DB Hitek": ["DB하이텍"],
+    "Magnachip Semiconductor": ["매그나칩"],
+    "Alteogen": ["알테오젠"],
+    "LX Semicon": ["LX세미콘"],
+    "LS Electric": ["LS일렉트릭"],
+    "HL Mando": ["HL만도"],
+    "SFA Semicon": ["SFA반도체"],
+    "SEMES": ["세메스"],
+    "BCnC": ["비씨엔씨"],
+    "ITM Semiconductor": ["아이티엠반도체"],
+    "CLIKA": ["클리카"],
+    "Point2 Technology": ["포인트투테크놀로지", "포인트투"],
+}
 
 # --------------------------------------------------------------------------
 # 3) SECTORS -- priority tiers. AI tags each kept item with one.
@@ -150,8 +209,12 @@ CATEGORIES = [
 # --------------------------------------------------------------------------
 # 5) TUNING KNOBS
 # --------------------------------------------------------------------------
-LOOKBACK_HOURS = 36
-CLAUDE_MODEL = "claude-haiku-4-5-20251001"
+# 72h so Monday's run covers the weekend in Korea. Safe to be long: headlines
+# already judged are remembered (docs/judged.json) and never paid for twice.
+LOOKBACK_HOURS = 72
+# Model that judges headlines. Haiku 5.5 is cheapest. If foreign companies keep
+# slipping through, try "claude-sonnet-5-5" (about 20x the price, still cents/day).
+CLAUDE_MODEL = "claude-haiku-5-5"
 MAX_ITEMS_TO_JUDGE = 400
 DISPLAY_TZ = "America/Los_Angeles"
 
