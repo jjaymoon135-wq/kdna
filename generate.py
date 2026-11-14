@@ -413,12 +413,27 @@ def parse_json(text):
     return data
 
 
+def _squash(s):
+    """Lowercase and drop spaces/punctuation so '베어 로보틱스' matches '베어로보틱스'
+    and 'Chips & Media' matches 'chips and media' style variations."""
+    return re.sub(r"[\s·\-\.,&]", "", (s or "").lower())
+
+
+def watch_terms():
+    """Everything that should earn a ★: the watchlist names plus the Korean/other
+    spellings in config.WATCHLIST_ALIASES (used for matching only, not searching)."""
+    names = [w for w in getattr(config, "WATCHLIST", []) if w.strip()]
+    for alts in getattr(config, "WATCHLIST_ALIASES", {}).values():
+        names += [a for a in alts if a.strip()]
+    return sorted({_squash(n) for n in names if _squash(n)})
+
+
 def enrich(items, judged):
     """Attach AI category, sector, priority + summaries onto original items."""
     by_cat = {c["key"]: [] for c in config.CATEGORIES}
     valid_cats = set(by_cat.keys())
     sector_meta = {s["key"]: s for s in config.SECTORS}
-    watch = [w for w in getattr(config, "WATCHLIST", []) if w.strip()]
+    watch = watch_terms()
     for j in judged.get("items", []):
         try:
             idx = int(j["i"])
@@ -430,8 +445,8 @@ def enrich(items, judged):
             continue
         sec_key = j.get("sector", "other")
         sec = sector_meta.get(sec_key, sector_meta["other"])
-        blob = f'{src.get("title","")} {j.get("en","")} {j.get("ko","")}'.lower()
-        starred = any(w.lower() in blob for w in watch)
+        blob = _squash(f'{src.get("title","")} {j.get("en","")} {j.get("ko","")}')
+        starred = any(w in blob for w in watch)
         by_cat[cat].append({
             **src,
             "en": (j.get("en") or "").strip(),

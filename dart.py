@@ -37,29 +37,63 @@ REPORT_CATEGORIES = [
 ]
 KEEP_KEYWORDS = [k for k, _ in REPORT_CATEGORIES]
 
-# US signal vocabulary ------------------------------------------------------
-US_STATES = [
-    "Texas", "텍사스", "California", "캘리포니아", "Georgia", "조지아",
+# --------------------------------------------------------------------------
+# US vocabulary and scoring rules (SCORER_VERSION 2)
+#
+# Why this is strict: share-offering filings (증권신고서) and many others carry
+# boilerplate legal text about the US ("U.S. Securities Act", "Regulation S",
+# "U.S. persons", "NYSE", "Inc."). A bare word like 미국 or USA therefore says
+# nothing about US expansion. A mention only counts as evidence when
+#   (a) it sits next to an investment word (투자, 설립, 법인, 공장, 시설 ...), and
+#   (b) it does NOT sit next to securities-law boilerplate, and
+#   (c) the filing type is not a share/bond offering (those are never auto-tagged).
+# Corporate suffixes (Inc., LLC, Corp., Co.) are not evidence at all.
+# --------------------------------------------------------------------------
+SCORER_VERSION = 2
+
+US_PLACES = [
+    "미국", "U.S.A", "U.S.", "USA", "United States",
+    # states (Korean filings write 조지아주 so it isn't confused with the country)
+    "Texas", "텍사스", "California", "캘리포니아", "조지아주", "State of Georgia",
     "Arizona", "애리조나", "Ohio", "오하이오", "Michigan", "미시간",
     "Tennessee", "테네시", "Indiana", "인디애나", "New York", "뉴욕",
-    "Nevada", "네바다", "North Carolina", "노스캐롤라이나", "Virginia", "버지니아",
-    "Alabama", "앨라배마", "Kentucky", "켄터키", "New Jersey", "뉴저지",
-]
-US_CITIES = [
+    "Nevada", "네바다", "North Carolina", "노스캐롤라이나", "South Carolina",
+    "사우스캐롤라이나", "Virginia", "버지니아", "Alabama", "앨라배마",
+    "Kentucky", "켄터키", "New Jersey", "뉴저지", "Oregon", "오리건",
+    "Florida", "플로리다", "Illinois", "일리노이", "Pennsylvania", "펜실베이니아",
+    "Massachusetts", "매사추세츠", "Colorado", "콜로라도", "Utah", "유타",
+    "Minnesota", "미네소타", "Louisiana", "루이지애나", "Oklahoma", "오클라호마",
+    # cities / hubs
     "Taylor", "테일러", "Austin", "오스틴", "Fremont", "프리몬트",
     "San Jose", "새너제이", "산호세", "Santa Clara", "산타클라라",
     "Silicon Valley", "실리콘밸리", "Sunnyvale", "서니베일",
     "Palo Alto", "팔로알토", "Atlanta", "애틀랜타", "Phoenix", "피닉스",
     "Detroit", "디트로이트", "Savannah", "서배너", "Ellabell",
 ]
-US_GENERIC = ["미국", "U.S.", "U.S.A", "USA", "United States", "Inc.", "LLC", "Corp.", " Co."]
-# things that mean the money is going somewhere else (NOT a US trigger)
-NON_US_HINTS = [
-    "베트남", "Vietnam", "인도", "India", "인도네시아", "Indonesia",
-    "헝가리", "Hungary", "폴란드", "Poland", "중국", "China", "우즈베키스탄",
-    "Uzbekistan", "말레이시아", "Malaysia", "태국", "Thailand", "유럽", "Europe",
-    "일본", "Japan", "멕시코", "Mexico", "국내", "충청", "경기도", "전라",
+# Words that show a nearby place is the target of an investment / operation
+INVEST_CONTEXT = [
+    "투자", "설립", "법인", "공장", "시설", "출자", "취득", "지분", "증설",
+    "현지", "자회사", "종속", "양수", "건설", "부지", "생산", "신설",
+    "연구소", "사무소", "지점", "R&D", "제조",
 ]
+# Securities-law / listing boilerplate. A place mention near these is ignored.
+BOILERPLATE = [
+    "증권법", "증권거래법", "Securities Act", "Regulation S", "Reg. S", "Rule 144A",
+    "144A", "미국인", "U.S. person", "US person", "U.S. Person", "적격기관",
+    "QIB", "예탁증서", "ADR", "GDR", "뉴욕증권거래소", "NYSE", "나스닥", "NASDAQ",
+    "Nasdaq", "청약", "공모", "판매제한", "매출제한", "인수인", "인수단", "주관회사",
+]
+# Foreign destinations (domestic place names are deliberately NOT used: a
+# company's own address would wrongly dim a filing).
+NON_US_PLACES = [
+    "베트남", "Vietnam", "India", "인도네시아", "Indonesia", "헝가리", "Hungary",
+    "폴란드", "Poland", "중국", "China", "우즈베키스탄", "Uzbekistan",
+    "말레이시아", "Malaysia", "태국", "Thailand", "유럽", "Europe",
+    "일본", "Japan", "멕시코", "Mexico", "캐나다", "Canada", "독일", "Germany",
+    "싱가포르", "Singapore", "필리핀", "Philippines",
+]
+# Filing types whose text is mostly boilerplate: never auto-tagged US-confirmed.
+NEVER_AUTO_US = ("증권신고서", "회사채")
 
 
 def _dart_key():
@@ -166,27 +200,43 @@ def _fetch_body_text(rcept_no):
         return None
 
 
-def score_us_relevance(body_text):
-    """Return (tag, matched_signals). tag in US-confirmed / Unclear / Non-US.
-    body_text None -> Unclear (never guess)."""
+def _evidence(text, terms, width=40, max_hits=60):
+    """Terms that appear next to an investment word and NOT next to securities
+    boilerplate. Looks at `width` characters either side of each mention."""
+    found = set()
+    for term in terms:
+        start, n = 0, 0
+        while n < max_hits:
+            i = text.find(term, start)
+            if i < 0:
+                break
+            n += 1
+            start = i + len(term)
+            window = text[max(0, i - width): i + len(term) + width]
+            if any(b in window for b in BOILERPLATE):
+                continue
+            if any(c in window for c in INVEST_CONTEXT):
+                found.add(term)
+                break
+    return sorted(found)
+
+
+def score_us_relevance(body_text, report_nm=""):
+    """Return (tag, matched_signals). tag in us / unclear / nonus.
+
+    Conservative on purpose: no body -> unclear; share/bond offerings are never
+    auto-confirmed as US (their text is mostly boilerplate); a bare country
+    word or company suffix is not evidence."""
     if not body_text:
         return "unclear", []
-    hits = []
-    for term in US_STATES + US_CITIES + US_GENERIC:
-        if term and term in body_text:
-            hits.append(term.strip())
-    non_us = [t for t in NON_US_HINTS if t and t in body_text]
-
-    # strong US signal = a state or city name (specific location)
-    strong = [h for h in hits if h in {s.strip() for s in US_STATES + US_CITIES}]
-    if strong:
-        return "us", sorted(set(hits))[:8]
-    if hits and not non_us:
-        return "us", sorted(set(hits))[:8]     # generic US words, no other-region noise
-    if non_us and not strong:
-        return "nonus", sorted(set(non_us))[:6]
-    if hits:
-        return "unclear", sorted(set(hits))[:8]
+    us = _evidence(body_text, US_PLACES)
+    if us:
+        if any(k in (report_nm or "") for k in NEVER_AUTO_US):
+            return "unclear", us[:8]            # shown for transparency, not confirmed
+        return "us", us[:8]
+    non_us = _evidence(body_text, NON_US_PLACES)
+    if non_us:
+        return "nonus", non_us[:6]
     return "unclear", []
 
 
@@ -250,15 +300,16 @@ def build_dart_layer(cache_path, days=3, max_body_fetches=120):
             "link": VIEWER.format(rcept),
         }
         cached = cache.get(rcept)
-        if cached:                                   # already scored — reuse
+        if cached and cached.get("v") == SCORER_VERSION:   # scored by current rules
             rec["us_tag"] = cached["us_tag"]
             rec["us_signals"] = cached.get("us_signals", [])
-        elif fetches < max_body_fetches:             # fetch + score once
+        elif fetches < max_body_fetches:             # fetch + score (old rules rescored)
             body = _fetch_body_text(rcept)
-            tag, sig = score_us_relevance(body)
+            tag, sig = score_us_relevance(body, f.get("report_nm", ""))
             rec["us_tag"], rec["us_signals"] = tag, sig
-            cache[rcept] = {"us_tag": tag, "us_signals": sig,
-                            "scored_at": datetime.now(timezone.utc).isoformat()}
+            if body is not None:                     # a failed download is retried next run
+                cache[rcept] = {"v": SCORER_VERSION, "us_tag": tag, "us_signals": sig,
+                                "scored_at": datetime.now(timezone.utc).isoformat()}
             fetches += 1
         else:                                        # over budget this run
             rec["us_tag"], rec["us_signals"] = "unclear", []
@@ -315,7 +366,7 @@ def find_double_signals(dart_filings, news_items, days=14):
         if not cn:
             continue
         key = _norm_name(cn)
-        if len(key) < 2:
+        if len(key) < 3:             # 2-character names match too much stray text
             continue
         match = None
         for blob, nblob, n in recent_news:
