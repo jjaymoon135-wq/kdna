@@ -2,13 +2,18 @@ name: Korea CRE Radar
 
 on:
   schedule:
-    # Times are UTC. 14:17 UTC = 11:17 PM in Korea (all year; Korea has no
-    # daylight saving) = 6:17 AM Pacific Standard / 7:17 AM Pacific Daylight.
-    # The odd minute (:17) is on purpose: GitHub delays runs scheduled on the
-    # hour. GitHub's own timer has been starting runs hours late, so for an
-    # on-time start trigger this workflow from an outside timer too (the
-    # workflow_dispatch below). This schedule then acts as a free backup.
-    - cron: "17 14 * * 1-5"   # Mon–Fri
+    # Times are UTC. GitHub starts scheduled runs HOURS late (measured 6h40m to
+    # 9h45m, even at an off-peak minute), and the news is fetched when the run
+    # actually STARTS, not at the scheduled time. So we schedule early to land
+    # in the morning, plus a second run as a midday refresh:
+    #   07:17 UTC = 11:17 PM Pacific (PST) the night before = 4:17 PM Korea.
+    #               With the usual delay it starts around 14:17 UTC (6-9 AM Pacific).
+    #   14:17 UTC = 11:17 PM Korea. With the usual delay it starts around midday
+    #               Pacific and picks up Korea's evening news.
+    # If GitHub ever runs on time, both are still useful. Headlines already
+    # judged are remembered, so the second run costs very little.
+    - cron: "17 7 * * 1-5"    # Mon-Fri
+    - cron: "17 14 * * 1-5"   # Mon-Fri
   workflow_dispatch:          # lets you run it manually / from an outside timer
 
 # Allow the workflow to commit the refreshed page back to the repo
