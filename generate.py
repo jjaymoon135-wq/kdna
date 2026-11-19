@@ -260,10 +260,40 @@ def dedup_signals(signals):
     return out
 
 
+def recent_stories(archive, days=None, limit=None):
+    """Stories first seen on the page within the last few days, newest first."""
+    days = days or getattr(config, "RECENT_DAYS", 5)
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    rows = [a for a in archive
+            if (a.get("first_seen") or "") >= cutoff and (a.get("en") or a.get("title"))]
+    rows.sort(key=lambda a: a.get("first_seen", ""), reverse=True)
+    return rows[:limit] if limit else rows
+
+
+def recent_for_prompt(archive):
+    """Distinct recent stories to show the AI (repeats collapsed to save tokens)."""
+    limit = getattr(config, "RECENT_LIMIT", 80)
+    return dedup_signals(recent_stories(archive))[:limit]
+
+
+def drop_repeats(signals, archive):
+    """Safety net behind the AI: drop new signals whose wording is nearly the same
+    as a story already on the page in the last few days."""
+    thresh = getattr(config, "DEDUP_CROSSDAY_SIMILARITY", 0.4)
+    grams = [title_trigrams(r.get("en") or r.get("title", "")) for r in recent_stories(archive)]
+    out = []
+    for s in signals:
+        g = title_trigrams(s.get("en") or s.get("title", ""))
+        if any(similar(g, kg, thresh) for kg in grams):
+            continue
+        out.append(s)
+    return out
+
+
 # --------------------------------------------------------------------------
 # STEP 3 — AI FILTER + SUMMARIZE  (one batched call)
 # --------------------------------------------------------------------------
-def build_prompt(items):
+def build_prompt(items, recent=None):
     cats = ", ".join(f'"{c["key"]}" ({c["label"]})' for c in config.CATEGORIES)
     sectors = ", ".join(f'"{s["key"]}" ({s["label"]})' for s in config.SECTORS)
     excludes = ", ".join(config.EXCLUDE_COMPANIES)
@@ -271,6 +301,16 @@ def build_prompt(items):
     numbered = "\n".join(
         f'{i}. [{it["lang"]}] {it["title"]}' for i, it in enumerate(items)
     )
+    recent_block = ""
+    if recent:
+        lines = "\n".join(f"- {(r.get('en') or r.get('title') or '')[:110]}" for r in recent)
+        recent_block = (
+            "ALREADY ON THE PAGE (kept during the last few days). If a headline below "
+            "reports the SAME underlying event as any line here (same company + same "
+            "event, even if worded differently or from another outlet), DROP it: the "
+            "reader has already seen it. Keep it only if it adds a genuinely NEW "
+            "development (a new funding round, a new site, a deal completing after an "
+            "announcement).\n" + lines + "\n")
     return f"""You are a research analyst for a commercial real estate team that \
 serves Korean companies expanding into the United States. The team already serves \
 the giant conglomerates, so your job is to surface SMALLER, gettable companies — \
@@ -309,6 +349,7 @@ DEDUPLICATE BY STORY, not just by wording. If several headlines report the SAME 
 underlying event (same company + same event), keep only ONE — the clearest — and \
 drop the rest.
 
+{recent_block}
 For every item you KEEP, provide:
 - "category": exactly one signal category from: {cats}
 - "sector": exactly one sector from: {sectors}. Semiconductor, AI, robotics and \
@@ -896,7 +937,7 @@ PAGE = """<!DOCTYPE html>
 # --------------------------------------------------------------------------
 # MAIN
 # --------------------------------------------------------------------------
-def process(items, seen):
+def process(items, seen, recent=None):
     """Judge items in chunks so the AI's output never truncates on heavy days,
     then merge every chunk into one categorized result.
 
@@ -913,7 +954,7 @@ def process(items, seen):
     for ci in range(n_chunks):
         chunk = items[ci * chunk_size:(ci + 1) * chunk_size]
         print(f"  judging chunk {ci + 1}/{n_chunks} ({len(chunk)} items)")
-        result = call_claude(build_prompt(chunk))
+        result = call_claude(build_prompt(chunk, recent))
         if result is None:                    # AI failed: do NOT mark as seen
             failed += 1
             continue
@@ -1014,10 +1055,15 @@ def main():
     print(f"  {len(fresh)} of {len(raw)} raw items are new since last run")
     items = dedup(fresh)
 
-    by_cat = process(items, seen)
+    recent = recent_for_prompt(archive)
+    print(f"  showing the AI {len(recent)} recent stories to avoid repeats")
+    by_cat = process(items, seen, recent)
     todays = flatten(by_cat)
     todays = dedup_signals(todays)
-    print(f"  kept {len(todays)} signals after AI filter + story-dedup")
+    n_before = len(todays)
+    todays = drop_repeats(todays, archive)
+    print(f"  kept {len(todays)} signals after AI filter + story-dedup "
+          f"({n_before - len(todays)} repeats of recent stories dropped)")
 
     added = merge_into_archive(archive, todays, datetime.now(timezone.utc).isoformat())
     print(f"  archive: +{added} new, {len(archive)} total")

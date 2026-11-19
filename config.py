@@ -226,6 +226,12 @@ DEDUP_SIMILARITY = 0.30
 # Dedup threshold for the AI's clean summaries (they're near-identical for the
 # same event, so this is higher). Backstop for dupes crossing AI batches.
 DEDUP_SIGNAL_SIMILARITY = 0.5
+# Repeat protection across days: the AI is shown the last RECENT_DAYS days of
+# stories (up to RECENT_LIMIT) and told to drop re-reports of the same event;
+# then any new item worded like a recent one (similarity >= this) is dropped too.
+RECENT_DAYS = 5
+RECENT_LIMIT = 80
+DEDUP_CROSSDAY_SIMILARITY = 0.4
 
 # --------------------------------------------------------------------------
 # 6) BROADER INTAKE (optional extra sources — all fail safe if unavailable)
