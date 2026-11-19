@@ -49,7 +49,7 @@ KEEP_KEYWORDS = [k for k, _ in REPORT_CATEGORIES]
 #   (c) the filing type is not a share/bond offering (those are never auto-tagged).
 # Corporate suffixes (Inc., LLC, Corp., Co.) are not evidence at all.
 # --------------------------------------------------------------------------
-SCORER_VERSION = 2
+SCORER_VERSION = 3
 
 US_PLACES = [
     "미국", "U.S.A", "U.S.", "USA", "United States",
@@ -72,10 +72,15 @@ US_PLACES = [
 ]
 # Words that show a nearby place is the target of an investment / operation
 INVEST_CONTEXT = [
-    "투자", "설립", "법인", "공장", "시설", "출자", "취득", "지분", "증설",
+    "설립", "법인", "공장", "시설", "출자", "취득", "지분", "증설",
     "현지", "자회사", "종속", "양수", "건설", "부지", "생산", "신설",
     "연구소", "사무소", "지점", "R&D", "제조",
 ]
+# "투자" counts as an investment word only when it is NOT part of 투자자 (investor):
+# "금융투자자들 ... 미국 달러" is share-issuance boilerplate, not a US investment.
+INVEST_RE = re.compile("|".join([r"투자(?!자)"] + [re.escape(w) for w in INVEST_CONTEXT]))
+# The word 미국 inside a currency ("미국 달러" = US dollars) is not a place.
+CURRENCY_RE = re.compile(r"미국\s*달러화?|미국\s*돈|미화|U\.?S\.?\s*\$|US\$|USD|U\.S\.\s*dollars?|United States dollars?|US dollars?", re.I)
 # Securities-law / listing boilerplate. A place mention near these is ignored.
 BOILERPLATE = [
     "증권법", "증권거래법", "Securities Act", "Regulation S", "Reg. S", "Rule 144A",
@@ -215,7 +220,7 @@ def _evidence(text, terms, width=40, max_hits=60):
             window = text[max(0, i - width): i + len(term) + width]
             if any(b in window for b in BOILERPLATE):
                 continue
-            if any(c in window for c in INVEST_CONTEXT):
+            if INVEST_RE.search(window):
                 found.add(term)
                 break
     return sorted(found)
@@ -229,6 +234,7 @@ def score_us_relevance(body_text, report_nm=""):
     word or company suffix is not evidence."""
     if not body_text:
         return "unclear", []
+    body_text = CURRENCY_RE.sub(" ", body_text)      # "미국 달러" is money, not a place
     us = _evidence(body_text, US_PLACES)
     if us:
         if any(k in (report_nm or "") for k in NEVER_AUTO_US):
