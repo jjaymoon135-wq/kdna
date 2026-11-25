@@ -21,9 +21,12 @@ API = "https://opendart.fss.or.kr/api"
 VIEWER = "https://dart.fss.or.kr/dsaf001/main.do?rcpNo={}"
 
 # report_nm keywords to KEEP, mapped to a display category ------------------
+# Matching ignores spaces: real names are written "타법인주식및출자증권취득결정".
 REPORT_CATEGORIES = [
     ("신규시설투자",                       "Facility investment"),
     ("타법인주식 및 출자증권 취득",         "Equity acquisition"),
+    ("타법인주식 및 출자증권 양수",         "Equity acquisition"),
+    ("유형자산 양수",                       "Tangible asset acquisition"),
     ("유상증자결정",                       "Paid-in capital increase"),
     ("전환사채권발행결정",                 "Convertible bond"),
     ("신주인수권부사채권발행결정",         "Warrant bond"),
@@ -35,7 +38,7 @@ REPORT_CATEGORIES = [
     ("자산양수",                           "Asset acquisition"),
     ("증권신고서",                         "Securities registration"),
 ]
-KEEP_KEYWORDS = [k for k, _ in REPORT_CATEGORIES]
+KEEP_KEYWORDS = [k.replace(" ", "") for k, _ in REPORT_CATEGORIES]
 
 # --------------------------------------------------------------------------
 # US vocabulary and scoring rules (SCORER_VERSION 2)
@@ -49,7 +52,7 @@ KEEP_KEYWORDS = [k for k, _ in REPORT_CATEGORIES]
 #   (c) the filing type is not a share/bond offering (those are never auto-tagged).
 # Corporate suffixes (Inc., LLC, Corp., Co.) are not evidence at all.
 # --------------------------------------------------------------------------
-SCORER_VERSION = 3
+SCORER_VERSION = 4
 
 US_PLACES = [
     "미국", "U.S.A", "U.S.", "USA", "United States",
@@ -69,6 +72,8 @@ US_PLACES = [
     "Silicon Valley", "실리콘밸리", "Sunnyvale", "서니베일",
     "Palo Alto", "팔로알토", "Atlanta", "애틀랜타", "Phoenix", "피닉스",
     "Detroit", "디트로이트", "Savannah", "서배너", "Ellabell",
+    "Montgomery", "몽고메리", "Clarksville", "클락스빌", "Queen Creek", "퀸크릭",
+    "Donaldsonville", "Spartanburg", "Kokomo", "코코모", "West Lafayette",
 ]
 # Words that show a nearby place is the target of an investment / operation
 INVEST_CONTEXT = [
@@ -118,7 +123,7 @@ def _get(path, params, timeout=30):
 # STEP 1 — list filings, filter, dedupe amendments
 # --------------------------------------------------------------------------
 def fetch_filings(days=3):
-    """Return kept filings from the last `days` days for pblntf_ty B and C.
+    """Return kept filings from the last `days` days for pblntf_ty B, C and I.
     Raises on hard DART failure so the caller can mark DART unavailable."""
     if not _dart_key():
         raise RuntimeError("DART_API_KEY not set")
@@ -128,7 +133,9 @@ def fetch_filings(days=3):
     bgn_de, end_de = bgn.strftime("%Y%m%d"), end.strftime("%Y%m%d")
 
     raw = []
-    for ty in ("B", "C"):
+    # B = 주요사항보고, C = 발행공시, I = 거래소공시 (KOSPI/KOSDAQ 신규시설투자,
+    # 타법인주식취득 — where most supplier plant / US-subsidiary moves are filed)
+    for ty in ("B", "C", "I"):
         page = 1
         while True:
             resp = _get("list.json", {
@@ -148,13 +155,15 @@ def fetch_filings(days=3):
                 break
             page += 1
 
-    kept = [f for f in raw if any(k in (f.get("report_nm") or "") for k in KEEP_KEYWORDS)]
+    kept = [f for f in raw
+            if any(k in (f.get("report_nm") or "").replace(" ", "") for k in KEEP_KEYWORDS)]
     return dedupe_amendments(kept)
 
 
 def categorize(report_nm):
+    name = (report_nm or "").replace(" ", "")
     for kw, label in REPORT_CATEGORIES:
-        if kw in (report_nm or ""):
+        if kw.replace(" ", "") in name:
             return label
     return "Other filing"
 

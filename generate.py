@@ -136,7 +136,9 @@ def fetch_all():
     jobs = [(q, "ko") for q in config.QUERIES_KO] + \
            [(q, "en") for q in config.QUERIES_EN] + \
            [(q, "ko") for q in config.QUERIES_SECONDARY_KO] + \
-           [(q, "en") for q in config.QUERIES_SECONDARY_EN]
+           [(q, "en") for q in config.QUERIES_SECONDARY_EN] + \
+           [(q, "ko") for q in getattr(config, "QUERIES_SUPPLIER_KO", [])] + \
+           [(q, "en") for q in getattr(config, "QUERIES_SUPPLIER_EN", [])]
 
     # Each watchlist name becomes its own search so we catch it by name.
     # Language is guessed by whether the name contains Hangul.
@@ -327,6 +329,12 @@ Korean company:
 - US expansion / investment / a new site, plant, HQ, R&D center or office in the US
 - a funding round (venture funding, Series A/B/C, capital raise)
 - an IPO or stock listing (Korea KOSDAQ/KOSPI or US Nasdaq/NYSE)
+- SUPPLIER / SUBCONTRACTOR news (협력사, 하청업체, 협력업체, 부품사, 소재사, 1차/2차 \
+협력사, 소부장): a Korean supplier setting up, building, expanding or buying a US \
+plant, warehouse, office or subsidiary; a Korean supplier winning a contract tied to \
+a US plant; or a group of Korean suppliers following a big Korean company to a US \
+site (e.g. "현대차 협력사 20곳 조지아 동반 진출"). These rarely make big news but take \
+large industrial footprints, so KEEP them even when the article is short or local.
 
 *** MOST IMPORTANT RULE — THE COMPANY ITSELF MUST BE KOREAN. ***
 The SUBJECT company must be founded/headquartered in South Korea. A Korean-LANGUAGE \
@@ -346,7 +354,8 @@ HARD EXCLUSION — drop any headline that is centrally about these big conglomer
 or their divisions/subsidiaries: {excludes}. Also drop any other top-tier Korean \
 conglomerate (chaebol) even if not named. If a small company is mentioned only as \
 a SUPPLIER to one of these, and the small company is the real subject, KEEP it — \
-the focus is the smaller company, not the chaebol.
+the focus is the smaller company, not the chaebol. Likewise KEEP stories about the SUPPLIERS of a \
+conglomerate's US plant as a group (named or unnamed) — the suppliers are the subject.
 
 Also discard: general market commentary, opinion pieces, stock-price chatter, \
 sports, unrelated politics.
@@ -357,7 +366,9 @@ drop the rest.
 
 {recent_block}
 For every item you KEEP, provide:
-- "category": exactly one signal category from: {cats}
+- "category": exactly one signal category from: {cats}. Use "supplier" whenever the \
+subject is a supplier/subcontractor/parts or materials maker moving into or growing in \
+the US (even if it is also a US expansion); use "us_expansion" for other companies.
 - "sector": exactly one sector from: {sectors}. Semiconductor, AI, robotics and \
 deep tech are the priority; beauty, bio, retail, finance are secondary. Pick the \
 best fit; use "other" only if none fit.

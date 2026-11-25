@@ -87,6 +87,21 @@ MARKETS = [
     {"key": "IN",  "label": "IN",
      "q_en": "Korean company Indiana plant Kokomo West Lafayette", "q_ko": "한국 기업 인디애나 공장",
      "terms": ["indiana", "indianapolis", "kokomo", "west lafayette", "new carlisle", "인디애나", "인디애나폴리스", "코코모", "웨스트라파예트"]},
+    {"key": "AL",  "label": "AL",
+     "q_en": "Korean company Alabama plant Montgomery", "q_ko": "한국 기업 앨라배마 공장",
+     "terms": ["alabama", "montgomery", "앨라배마", "몽고메리"]},
+    {"key": "TN",  "label": "TN",
+     "q_en": "Korean company Tennessee plant Clarksville", "q_ko": "한국 기업 테네시 공장",
+     "terms": ["tennessee", "clarksville", "spring hill", "nashville", "테네시", "클락스빌", "클라크스빌"]},
+    {"key": "CAR", "label": "Carolinas",
+     "q_en": "Korean company South Carolina North Carolina plant", "q_ko": "한국 기업 캐롤라이나 공장",
+     "terms": ["south carolina", "north carolina", "spartanburg", "newberry", "greenville, sc", "charlotte", "사우스캐롤라이나", "노스캐롤라이나", "캐롤라이나"]},
+    {"key": "AZ",  "label": "AZ",
+     "q_en": "Korean company Arizona plant Phoenix", "q_ko": "한국 기업 애리조나 공장",
+     "terms": ["arizona", "phoenix", "queen creek", "mesa, az", "애리조나", "피닉스", "퀸크릭"]},
+    {"key": "LOU", "label": "Louisiana",
+     "q_en": "Korean company Louisiana plant", "q_ko": "한국 기업 루이지애나 공장",
+     "terms": ["louisiana", "donaldsonville", "baton rouge", "루이지애나", "도널드슨빌"]},
 ]
 # Extra Korean-American community searches (Koreatown, 한인 business news).
 MARKET_COMMUNITY_QUERIES = [
@@ -94,6 +109,37 @@ MARKET_COMMUNITY_QUERIES = [
     ("한인타운 부동산 개발", "ko"),
     ("Korean American business commercial real estate", "en"),
     ("한인 기업 미국 사무실 임대", "ko"),
+]
+
+
+# ---- SUPPLIERS / 협력사 / 하청업체 (small news, big square footage) ----
+QUERIES_SUPPLIER_KO = [
+    "협력사 미국 동반 진출",
+    "하청업체 미국 공장",
+    "협력업체 미국 공장 설립",
+    "부품사 미국 공장",
+    "자동차 부품 미국 법인 설립",
+    "현대차 협력사 미국",
+    "메타플랜트 협력사",
+    "2차 협력사 미국 진출",
+    "배터리 소재 미국 공장",
+    "배터리 협력사 미국 공장",
+    "반도체 협력사 텍사스",
+    "소부장 미국 공장 설립",
+    "조선 기자재 미국 진출",
+    "site:theguru.co.kr 미국 공장",
+    "site:thelec.kr 미국 공장",
+]
+QUERIES_SUPPLIER_EN = [
+    "Korean auto parts supplier US plant",
+    "Korean supplier Georgia plant jobs",
+    "Korean supplier Alabama plant",
+    "Korean supplier Tennessee plant",
+    "Korean battery materials supplier US plant",
+    "Korean manufacturer announces US facility jobs",
+    "South Korean company economic development plant investment county",
+    "Hyundai Metaplant supplier",
+    "Samsung Taylor supplier Korean",
 ]
 
 # ---- SECONDARY sectors (kept, shown lower & de-emphasized) ----
@@ -234,6 +280,9 @@ SECTORS = [
     {"key": "ai",            "label": "AI",            "priority": "primary"},
     {"key": "robotics",      "label": "Robotics",      "priority": "primary"},
     {"key": "deeptech",      "label": "Deep Tech",     "priority": "primary"},
+    {"key": "auto",          "label": "Auto Parts",    "priority": "primary"},
+    {"key": "battery",       "label": "Battery / Materials", "priority": "primary"},
+    {"key": "industrial",    "label": "Industrial",    "priority": "primary"},
     {"key": "beauty",        "label": "Beauty",        "priority": "secondary"},
     {"key": "bio",           "label": "Bio",           "priority": "secondary"},
     {"key": "retail",        "label": "Retail",        "priority": "secondary"},
@@ -247,6 +296,7 @@ SECTORS = [
 CATEGORIES = [
     {"key": "us_expansion", "label": "US Expansion", "emoji": "🇺🇸"},
     {"key": "funding",      "label": "Funding",      "emoji": "💰"},
+    {"key": "supplier",     "label": "Suppliers / 협력사", "emoji": "🏭"},
     {"key": "ipo",          "label": "IPO / Listing","emoji": "📈"},
     {"key": "other",        "label": "Other Notable","emoji": "•"},
 ]
