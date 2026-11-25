@@ -50,7 +50,7 @@ EXCERPT_CHARS = 2500          # how much of a filing the AI reads to write its h
 
 def worth_showing(rec):
     """Space filings, or any filing tied to the US; never filings tied abroad."""
-    if rec.get("us_tag") == "nonus":
+    if rec.get("us_tag") in ("nonus", "domestic"):     # abroad, or inside Korea
         return False
     return rec.get("category") in SPACE_CATEGORIES or rec.get("us_tag") == "us"
 
@@ -384,7 +384,9 @@ def build_dart_layer(cache_path, days=3, max_body_fetches=120, summarize=None):
         if rec.get("us_tag") == "unclear" and c:
             if c in ("US", "USA", "UNITED STATES"):
                 rec["us_tag"] = "us"
-            elif c not in ("KR", "KOREA", "SOUTH KOREA", "NONE", "UNKNOWN", "-"):
+            elif c in ("KR", "KOREA", "SOUTH KOREA", "REPUBLIC OF KOREA"):
+                rec["us_tag"] = "domestic"           # a site/deal inside Korea: no US space
+            elif c not in ("NONE", "UNKNOWN", "-", "N/A"):
                 rec["us_tag"] = "nonus"
 
     shown = [r for r in out if worth_showing(r)]
