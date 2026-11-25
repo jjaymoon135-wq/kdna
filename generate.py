@@ -145,6 +145,12 @@ def fetch_all():
         jobs.append((f'{name} 미국' if lang == "ko" else f"{name} US", lang))
         jobs.append((name, lang))
 
+    # One English + one Korean search per market, plus community searches
+    for m in getattr(config, "MARKETS", []):
+        if m.get("q_en"): jobs.append((m["q_en"], "en"))
+        if m.get("q_ko"): jobs.append((m["q_ko"], "ko"))
+    jobs += list(getattr(config, "MARKET_COMMUNITY_QUERIES", []))
+
     # Drop repeated searches (same query + language) so we never fetch twice
     jobs = list(dict.fromkeys(jobs))
 
@@ -670,11 +676,18 @@ def render_html(archive, dart_data=None, top_signals=None):
                     f'<span class="tab-count">{len(months[mk])}</span></button>')
         panels.append(f'<div class="panel" id="panel-{pid}">{render_sections(months[mk])}</div>')
 
+    mkbar = ""
+    if getattr(config, "MARKETS", []):
+        mkbar = '<button class="mkbtn on" data-mk="*">All markets</button>' + "".join(
+            f'<button class="mkbtn" data-mk="{html.escape(m["label"])}">{html.escape(m["label"])}</button>'
+            for m in config.MARKETS)
+
     return PAGE.format(
         date=html.escape(date_str),
         latest_count=len(latest),
         total=len(archive),
         generated=now_local.strftime("%-I:%M %p %Z"),
+        mkbar=mkbar,
         tabs="\n".join(tabs),
         panels="\n".join(panels),
     )
@@ -708,6 +721,18 @@ def relative_time(iso_str):
     return then.strftime("%b %-d")
 
 
+_MARKET_TERMS = None
+
+def market_labels(item):
+    """Which of your markets a story mentions (by keywords; no AI cost)."""
+    global _MARKET_TERMS
+    if _MARKET_TERMS is None:
+        _MARKET_TERMS = [(m["label"], [_squash(t) for t in m.get("terms", [])])
+                         for m in getattr(config, "MARKETS", [])]
+    blob = _squash(f'{item.get("title","")} {item.get("en","")} {item.get("ko","")}')
+    return [lab for lab, terms in _MARKET_TERMS if any(t and t in blob for t in terms)]
+
+
 def render_card(r):
     en = html.escape(r.get("en", "") or r.get("title", ""))
     ko = html.escape(r.get("ko", ""))
@@ -724,9 +749,12 @@ def render_card(r):
     when_el = f'<span class="when">{when}</span>' if when else ""
     star = '<span class="star">★</span>' if r.get("starred") else ""
     card_cls = cls + " starred" if r.get("starred") else cls
+    mk = market_labels(r)
+    mk_attr = html.escape(" ".join(mk))
+    mk_chips = "".join(f'<span class="mk">{html.escape(x)}</span>' for x in mk)
     return f"""
-      <a class="{card_cls}" href="{link}" target="_blank" rel="noopener">
-        <div class="row">{star}{badge}<span class="en">{en}</span></div>
+      <a class="{card_cls}" data-mk="{mk_attr}" href="{link}" target="_blank" rel="noopener">
+        <div class="row">{star}{badge}{mk_chips}<span class="en">{en}</span></div>
         {ko_line}
         <div class="meta"><span class="src">{source}</span>{when_el}<span class="head">{title}</span></div>
       </a>"""
@@ -885,6 +913,17 @@ PAGE = """<!DOCTYPE html>
   .footnote {{ max-width: 760px; margin: 10px auto 0; font-size: 11px;
     color: var(--muted); text-align: center; opacity: .8; }}
 
+  .mk {{ flex: none; font-size: 10.5px; font-weight: 600; padding: 1px 6px;
+    border-radius: 4px; color: #8a5a00; background: #fbf0d9; white-space: nowrap;
+    transform: translateY(-1px); }}
+  .mkbar {{ display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 2px; }}
+  .mkbtn {{ font: inherit; font-size: 12px; padding: 3px 10px; border-radius: 999px;
+    border: 1px solid var(--line); background: transparent; color: var(--muted);
+    cursor: pointer; }}
+  .mkbtn.on {{ color: #fff; background: var(--accent); border-color: var(--accent); }}
+  .card.hide, section.cat.hide {{ display: none; }}
+  @media (prefers-color-scheme: dark) {{ .mk {{ color:#f0c878; background:#3a2f17; }} }}
+
   @media (max-width: 480px) {{
     h1 {{ font-size: 25px; }}
     .meta .head {{ display: none; }}
@@ -908,6 +947,7 @@ PAGE = """<!DOCTYPE html>
         <div>{date}</div>
       </div>
     </header>
+    <div class="mkbar" id="mkbar">{mkbar}</div>
     <nav class="tabs">
     {tabs}
     </nav>
@@ -918,6 +958,35 @@ PAGE = """<!DOCTYPE html>
     </footer>
     <div class="footnote">📄 DART 주요사항보고 covers <b>listed companies only</b> — unlisted suppliers are not captured here.</div>
   </div>
+  <script>
+    (function () {{
+      var on = {{}};
+      function apply() {{
+        var keys = Object.keys(on).filter(function (k) {{ return on[k]; }});
+        document.querySelectorAll('.card[data-mk]').forEach(function (c) {{
+          var mk = (c.getAttribute('data-mk') || '').split(' ');
+          var show = !keys.length || keys.some(function (k) {{ return mk.indexOf(k) > -1; }});
+          c.classList.toggle('hide', !show);
+        }});
+        document.querySelectorAll('section.cat').forEach(function (s) {{
+          var any = s.querySelector('.card:not(.hide)');
+          s.classList.toggle('hide', !any);
+        }});
+      }}
+      document.querySelectorAll('.mkbtn').forEach(function (b) {{
+        b.addEventListener('click', function () {{
+          var k = b.getAttribute('data-mk');
+          if (k === '*') {{ on = {{}}; document.querySelectorAll('.mkbtn').forEach(function (x) {{ x.classList.remove('on'); }}); b.classList.add('on'); }}
+          else {{
+            on[k] = !on[k]; b.classList.toggle('on', on[k]);
+            var all = document.querySelector('.mkbtn[data-mk="*"]');
+            if (all) all.classList.toggle('on', !Object.keys(on).some(function (z) {{ return on[z]; }}));
+          }}
+          apply();
+        }});
+      }});
+    }})();
+  </script>
   <script>
     document.querySelectorAll('.tab').forEach(function (t) {{
       t.addEventListener('click', function () {{

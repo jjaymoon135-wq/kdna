@@ -51,6 +51,51 @@ QUERIES_EN = [
     "Korean startup Silicon Valley",
 ]
 
+
+# --------------------------------------------------------------------------
+# 1b) MARKETS -- the metros you cover. Each one adds two searches (English +
+#     Korean) and a tag on every story that mentions it (shown as a chip and
+#     usable as a filter on the page). "terms" are matched against the headline
+#     ignoring case, spaces and dashes. Add a market by copying a block.
+#     Avoid bare "georgia" (it is also the country) and bare "la".
+# --------------------------------------------------------------------------
+MARKETS = [
+    {"key": "LA",  "label": "LA",
+     "q_en": "Korean company Los Angeles", "q_ko": "한국 기업 로스앤젤레스",
+     "terms": ["los angeles", "koreatown", "로스앤젤레스", "엘에이", "한인타운", "vernon", "gardena", "torrance", "city of industry"]},
+    {"key": "OC",  "label": "OC",
+     "q_en": "Korean company Orange County California Irvine", "q_ko": "한국 기업 오렌지카운티 어바인",
+     "terms": ["orange county", "irvine", "anaheim", "buena park", "fullerton", "오렌지카운티", "어바인", "애너하임", "부에나파크"]},
+    {"key": "SV",  "label": "SV",
+     "q_en": "Korean company Silicon Valley San Jose Santa Clara", "q_ko": "한국 기업 실리콘밸리 산호세",
+     "terms": ["silicon valley", "san jose", "santa clara", "sunnyvale", "fremont", "milpitas", "palo alto", "mountain view", "bay area", "실리콘밸리", "산호세", "산타클라라", "서니베일", "프리몬트", "베이에어리어"]},
+    {"key": "DAL", "label": "DAL",
+     "q_en": "Korean company Dallas Plano Frisco Texas", "q_ko": "한국 기업 댈러스 플레이노",
+     "terms": ["dallas", "plano", "frisco", "carrollton", "fort worth", "richardson", "allen, tx", "댈러스", "플레이노", "프리스코", "캐롤턴", "포트워스"]},
+    {"key": "HOU", "label": "HOU",
+     "q_en": "Korean company Houston Texas", "q_ko": "한국 기업 휴스턴",
+     "terms": ["houston", "katy", "sugar land", "휴스턴", "슈거랜드"]},
+    {"key": "ATX", "label": "ATX",
+     "q_en": "Korean company Austin Taylor Texas Samsung", "q_ko": "한국 기업 오스틴 테일러 텍사스",
+     "terms": ["austin", "round rock", "pflugerville", "taylor fab", "taylor, texas", "taylor texas", "오스틴", "라운드록", "테일러 공장", "테일러시", "테일러 팹"]},
+    {"key": "ATL", "label": "ATL",
+     "q_en": "Korean company Atlanta Georgia plant", "q_ko": "한국 기업 애틀랜타 조지아주",
+     "terms": ["atlanta", "savannah", "gwinnett", "duluth, ga", "metaplant", "bryan county", "lagrange", "cartersville", "애틀랜타", "조지아주", "사바나", "메타플랜트", "귀넷", "더룻"]},
+    {"key": "DET", "label": "DET",
+     "q_en": "Korean company Detroit Michigan plant", "q_ko": "한국 기업 디트로이트 미시간",
+     "terms": ["detroit", "michigan", "auburn hills", "troy, mi", "디트로이트", "미시간"]},
+    {"key": "IN",  "label": "IN",
+     "q_en": "Korean company Indiana plant Kokomo West Lafayette", "q_ko": "한국 기업 인디애나 공장",
+     "terms": ["indiana", "indianapolis", "kokomo", "west lafayette", "new carlisle", "인디애나", "인디애나폴리스", "코코모", "웨스트라파예트"]},
+]
+# Extra Korean-American community searches (Koreatown, 한인 business news).
+MARKET_COMMUNITY_QUERIES = [
+    ("Koreatown Los Angeles development", "en"),
+    ("한인타운 부동산 개발", "ko"),
+    ("Korean American business commercial real estate", "en"),
+    ("한인 기업 미국 사무실 임대", "ko"),
+]
+
 # ---- SECONDARY sectors (kept, shown lower & de-emphasized) ----
 QUERIES_SECONDARY_KO = [
     "K뷰티 미국 진출",
