@@ -80,7 +80,7 @@ MARKETS = [
      "terms": ["austin", "round rock", "pflugerville", "taylor fab", "taylor, texas", "taylor texas", "오스틴", "라운드록", "테일러 공장", "테일러시", "테일러 팹"]},
     {"key": "ATL", "label": "ATL",
      "q_en": "Korean company Atlanta Georgia plant", "q_ko": "한국 기업 애틀랜타 조지아주",
-     "terms": ["atlanta", "savannah", "gwinnett", "duluth, ga", "metaplant", "bryan county", "lagrange", "cartersville", "애틀랜타", "조지아주", "사바나", "메타플랜트", "귀넷", "더룻"]},
+     "terms": ["atlanta", "savannah", "gwinnett", "duluth, ga", "metaplant", "bryan county", "georgia, us", "georgia (us)", "georgia, usa", "georgia state", "lagrange", "cartersville", "애틀랜타", "조지아주", "사바나", "메타플랜트", "귀넷", "더룻"]},
     {"key": "DET", "label": "DET",
      "q_en": "Korean company Detroit Michigan plant", "q_ko": "한국 기업 디트로이트 미시간",
      "terms": ["detroit", "michigan", "auburn hills", "troy, mi", "디트로이트", "미시간"]},

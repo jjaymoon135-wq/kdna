@@ -39,6 +39,21 @@ REPORT_CATEGORIES = [
     ("증권신고서",                         "Securities registration"),
 ]
 KEEP_KEYWORDS = [k.replace(" ", "") for k, _ in REPORT_CATEGORIES]
+# Filing types that can mean SPACE (a plant, site, subsidiary, property). These are
+# always shown. Every other type (share/bond issues, guarantees, disposals) is about
+# money, not space, and is shown only when the filing ties it to the US.
+SPACE_CATEGORIES = {"Facility investment", "Equity acquisition",
+                    "Tangible asset acquisition", "Business acquisition",
+                    "Asset acquisition"}
+EXCERPT_CHARS = 2500          # how much of a filing the AI reads to write its headline
+
+
+def worth_showing(rec):
+    """Space filings, or any filing tied to the US; never filings tied abroad."""
+    if rec.get("us_tag") == "nonus":
+        return False
+    return rec.get("category") in SPACE_CATEGORIES or rec.get("us_tag") == "us"
+
 
 # --------------------------------------------------------------------------
 # US vocabulary and scoring rules (SCORER_VERSION 2)
@@ -293,14 +308,16 @@ def load_corpcode(cache_path, max_age_days=30):
 # --------------------------------------------------------------------------
 # ORCHESTRATION
 # --------------------------------------------------------------------------
-def build_dart_layer(cache_path, days=3, max_body_fetches=120):
-    """Full DART layer. Returns dict with filings (each scored) + meta.
+def build_dart_layer(cache_path, days=3, max_body_fetches=120, summarize=None):
+    """Full DART layer. Returns dict with the filings worth showing (each scored,
+    and with a readable headline when `summarize` is given) + meta.
+    `summarize(list_of_{id,corp,report,text})` -> {id: {en, ko, country}}.
     Raises only on total failure (so caller marks unavailable); per-filing
     body errors degrade to 'unclear'."""
     cache = _load_cache(cache_path)
     filings = fetch_filings(days=days)
 
-    out = []
+    out, pending = [], []
     fetches = 0
     for f in filings:
         rcept = f.get("rcept_no", "")
@@ -315,7 +332,9 @@ def build_dart_layer(cache_path, days=3, max_body_fetches=120):
             "link": VIEWER.format(rcept),
         }
         cached = cache.get(rcept)
-        if cached and cached.get("v") == SCORER_VERSION:   # scored by current rules
+        fresh = bool(cached and cached.get("v") == SCORER_VERSION)
+        body = None
+        if fresh:                                    # scored by current rules
             rec["us_tag"] = cached["us_tag"]
             rec["us_signals"] = cached.get("us_signals", [])
         elif fetches < max_body_fetches:             # fetch + score (old rules rescored)
@@ -328,10 +347,50 @@ def build_dart_layer(cache_path, days=3, max_body_fetches=120):
             fetches += 1
         else:                                        # over budget this run
             rec["us_tag"], rec["us_signals"] = "unclear", []
+
+        # Readable headline: reuse the saved one, or queue this filing for the AI
+        saved = cache.get(rcept) or {}
+        if saved.get("en"):
+            rec["en"], rec["ko"] = saved["en"], saved.get("ko", "")
+            rec["country"] = saved.get("country", "")
+        elif summarize is not None and worth_showing(rec):
+            if body is None and rcept in cache and fetches < max_body_fetches:
+                body = _fetch_body_text(rcept)
+                fetches += 1
+            if body:
+                pending.append((rec, body[:EXCERPT_CHARS]))
         out.append(rec)
 
+    if pending and summarize is not None:
+        try:
+            got = summarize([{"id": r["rcept_no"], "corp": r["corp_name"],
+                              "report": r["report_nm"], "text": t} for r, t in pending]) or {}
+        except Exception as e:
+            print(f"  ! dart summaries failed: {type(e).__name__}", file=sys.stderr)
+            got = {}
+        for rec, _ in pending:
+            s = got.get(rec["rcept_no"])
+            if not s or not s.get("en"):
+                continue                             # retried next run
+            rec["en"], rec["ko"] = s["en"], s.get("ko", "")
+            rec["country"] = s.get("country", "")
+            if rec["rcept_no"] in cache:
+                cache[rec["rcept_no"]].update(en=rec["en"], ko=rec["ko"],
+                                              country=rec["country"])
+
+    # The AI read the filing: where it names the country, settle an unclear tag
+    for rec in out:
+        c = (rec.get("country") or "").strip().upper()
+        if rec.get("us_tag") == "unclear" and c:
+            if c in ("US", "USA", "UNITED STATES"):
+                rec["us_tag"] = "us"
+            elif c not in ("KR", "KOREA", "SOUTH KOREA", "NONE", "UNKNOWN", "-"):
+                rec["us_tag"] = "nonus"
+
+    shown = [r for r in out if worth_showing(r)]
     _save_cache(cache_path, cache)
-    return {"filings": out, "fetched_bodies": fetches, "count": len(out)}
+    return {"filings": shown, "fetched_bodies": fetches, "count": len(shown),
+            "hidden": len(out) - len(shown), "summarized": len(pending)}
 
 
 def _load_cache(path):

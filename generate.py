@@ -574,27 +574,63 @@ US_TAG_META = {
 }
 
 
+def summarize_filings(batch):
+    """One readable headline per DART filing, written by the AI from the filing
+    text. Returns {rcept_no: {en, ko, country}}. Missing ids are retried next run."""
+    out = {}
+    for i in range(0, len(batch), 12):
+        chunk = batch[i:i + 12]
+        docs = "\n\n".join(
+            f'### id={b["id"]} | company={b["corp"]} | filing={b["report"]}\n{b["text"]}'
+            for b in chunk)
+        prompt = f"""You read Korean corporate disclosures (DART) for a commercial real \
+estate broker who wants to know what each company is BUILDING, BUYING or SETTING UP.
+
+For each filing below write:
+- "en": one plain English headline, max ~18 words: the company (romanized), what it \
+is doing (new plant, facility investment, buying shares of / setting up a subsidiary, \
+buying land or a building, raising money for ...), WHERE (country, and state/city if \
+given), the amount (e.g. ₩45B or $12M) and the purpose if stated. Example: "Hanul \
+Precision invests ₩45B in new auto-parts plant in Alabama, US (done 2027)".
+- "ko": the same in natural Korean, max ~35 characters.
+- "country": where the asset/subsidiary/investment is: "US", "KR" (inside Korea), \
+another country's name, or "" if the text does not say.
+Use only facts in the text. Do not guess. Return STRICT JSON only:
+{{"items":[{{"id":"<id>","en":"...","ko":"...","country":"..."}}]}}
+
+FILINGS:
+{docs}
+"""
+        res = call_claude(prompt)          # already parsed {"items": [...]}, or None
+        for it in (res or {}).get("items", []):
+            if it.get("id") and it.get("en"):
+                out[str(it["id"])] = {"en": it["en"].strip(), "ko": (it.get("ko") or "").strip(),
+                                      "country": (it.get("country") or "").strip()}
+    return out
+
+
 def render_dart_card(f):
     tag_emoji, tag_label, tag_cls = US_TAG_META.get(f.get("us_tag", "unclear"),
                                                     US_TAG_META["unclear"])
     corp = html.escape(f.get("corp_name", ""))
-    title = html.escape(f.get("report_nm", ""))
+    report = html.escape(f.get("report_nm", ""))
     cat = html.escape(f.get("category", ""))
     link = html.escape(f.get("link", "#"))
     dt = html.escape(f.get("rcept_dt", ""))
-    sigs = ", ".join(html.escape(s) for s in f.get("us_signals", [])[:6])
-    sig_line = f'<div class="dart-sig">signals: {sigs}</div>' if sigs else ""
-    dimmed = " dart-dim" if f.get("us_tag") == "nonus" else ""
+    en = html.escape(f.get("en") or f'{f.get("corp_name","")} — {f.get("category","")}')
+    ko = html.escape(f.get("ko", ""))
+    ko_line = f'<div class="ko">{ko}</div>' if ko else ""
+    mk = market_labels({"title": "", "en": f.get("en", ""), "ko": f.get("ko", "")})
+    mk_attr = html.escape(" ".join(mk))
+    mk_chips = "".join(f'<span class="mk">{html.escape(x)}</span>' for x in mk)
     return f"""
-      <a class="card dart{dimmed}" href="{link}" target="_blank" rel="noopener">
+      <a class="card dart" data-mk="{mk_attr}" href="{link}" target="_blank" rel="noopener">
         <div class="row">
-          <span class="ustag {tag_cls}">{tag_emoji} {tag_label}</span>
-          <span class="badge muted">{cat}</span>
-          <span class="en">{corp}</span>
+          <span class="ustag {tag_cls}">{tag_emoji} {tag_label}</span>{mk_chips}
+          <span class="en">{en}</span>
         </div>
-        <div class="dart-title">{title}</div>
-        {sig_line}
-        <div class="meta"><span class="src">DART</span><span class="when">{dt}</span></div>
+        {ko_line}
+        <div class="meta"><span class="src">DART · {corp}</span><span class="when">{dt}</span><span class="head">{cat} · {report}</span></div>
       </a>"""
 
 
@@ -606,12 +642,11 @@ def render_dart_section(dart_data):
     filings = dart_data.get("filings", [])
     if not filings:
         return ('<section class="cat"><h2><span class="emoji">📄</span>DART Filings</h2>'
-                '<div class="dart-unavail">No qualifying filings in the last 3 days.</div>'
+                '<div class="dart-unavail">No plant, site or subsidiary filings in the last 3 days.</div>'
                 '</section>')
-    # US-confirmed first, then unclear, then non-US (dimmed) last
-    order = {"us": 0, "unclear": 1, "nonus": 2}
-    filings = sorted(filings, key=lambda x: (order.get(x.get("us_tag"), 1),
-                                             x.get("rcept_no", "")), reverse=False)
+    # US first, then unclear; newest first within each
+    order = {"us": 0, "unclear": 1}
+    filings = sorted(filings, key=lambda x: x.get("rcept_no", ""), reverse=True)
     filings = sorted(filings, key=lambda x: order.get(x.get("us_tag"), 1))
     cards = "".join(render_dart_card(f) for f in filings)
     return f"""
@@ -631,14 +666,18 @@ def render_top_signals(tops):
         corp = html.escape(f.get("corp_name", ""))
         cat = html.escape(f.get("category", ""))
         link = html.escape(f.get("link", "#"))
+        fen = html.escape(f.get("en") or f.get("corp_name", ""))
+        n = t.get("news") or {}
+        nen = html.escape(n.get("en") or n.get("title") or "")
         tag_emoji, tag_label, tag_cls = US_TAG_META.get(f.get("us_tag", "unclear"),
                                                         US_TAG_META["unclear"])
         rows.append(f"""
       <a class="card fire" href="{link}" target="_blank" rel="noopener">
         <div class="row"><span class="star">🔥</span>
           <span class="ustag {tag_cls}">{tag_emoji} {tag_label}</span>
-          <span class="en">{corp}</span></div>
-        <div class="dart-title">Double signal · news + DART filing ({cat})</div>
+          <span class="en">{fen}</span></div>
+        <div class="dart-title">In the news too: {nen}</div>
+        <div class="meta"><span class="src">DART · {corp}</span><span class="head">{cat}</span></div>
       </a>""")
     return f"""
         <section class="cat top-signals">
@@ -1154,8 +1193,11 @@ def main():
     dart_data, top_signals = None, None
     try:
         import dart
-        dart_data = dart.build_dart_layer("docs/dart_cache.json", days=3)
-        print(f"  dart: {dart_data['count']} filings, {dart_data['fetched_bodies']} bodies fetched")
+        dart_data = dart.build_dart_layer("docs/dart_cache.json", days=3,
+                                          summarize=summarize_filings)
+        print(f"  dart: {dart_data['count']} shown, {dart_data['hidden']} financing/foreign "
+              f"filings hidden, {dart_data['summarized']} headlines written, "
+              f"{dart_data['fetched_bodies']} bodies fetched")
         # cross-signal: DART company also in recent news within 14 days
         recent_news = [a for a in archive]
         flagged, top_signals = dart.find_double_signals(
